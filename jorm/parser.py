@@ -1,6 +1,7 @@
 import re
 from typing import Dict, List, Tuple
 import os
+import yaml
 
 
 def parse_dag_text(path: str) -> Dict:
@@ -19,6 +20,8 @@ def parse_dag_text(path: str) -> Dict:
         return _parse_txt(content)
     elif ext == ".md":
         return _parse_md(content)
+    elif ext in [".yaml", ".yml"]:
+        return _parse_yaml(content)
     else:
         raise ValueError(f"Formato de archivo no soportado: {ext}")
 
@@ -91,6 +94,56 @@ def _parse_md(content: str) -> Dict:
                 dependencies.append((m.group(1).strip(), m.group(2).strip()))
     return {"name": name, "schedule": schedule, "tasks": tasks, "dependencies": dependencies}
 
+
+def _parse_yaml(content: str) -> Dict:
+    """
+    Parse YAML DAG definition.
+
+    :param content: File content
+    :type content: str
+    :return: Parsed DAG dictionary
+    :rtype: Dict
+    """
+    try:
+        data = yaml.safe_load(content)
+    except yaml.YAMLError as e:
+        raise ValueError(f"Invalid YAML format: {e}")
+    
+    if not isinstance(data, dict):
+        raise ValueError("YAML content must be a dictionary")
+    
+    name = data.get("dag", "")
+    schedule = data.get("schedule", "")
+    tasks = []
+    dependencies = []
+    task_configs = {}
+    
+    # Extract tasks and their configurations
+    tasks_data = data.get("tasks", {})
+    if isinstance(tasks_data, dict):
+        for task_name, task_config in tasks_data.items():
+            tasks.append(task_name)
+            task_configs[task_name] = task_config
+            
+            # Extract dependencies from depends_on field
+            depends_on = task_config.get("depends_on", [])
+            if isinstance(depends_on, str):
+                depends_on = [depends_on]
+            
+            for dependency in depends_on:
+                dependencies.append((task_name, dependency))
+    
+    result = {
+        "name": name,
+        "schedule": schedule,
+        "tasks": tasks,
+        "dependencies": dependencies,
+        "task_configs": task_configs
+    }
+    
+    return result
+
+
 def validate_dag(parsed: Dict) -> Tuple[bool, List[str]]:
     """
     Validate a parsed DAG dictionary.
@@ -125,7 +178,7 @@ def validate_dag(parsed: Dict) -> Tuple[bool, List[str]]:
         errors.append("Cyclic dependencies detected.")
     # Validate schedule (example: every X minutes)
     sched = parsed.get("schedule", "").lower()
-    if sched and not re.match(r"every \\d+ (minute|minutes|hour|hours|day|days)", sched):
+    if sched and not re.match(r"every \d+ (minute|minutes|hour|hours|day|days)", sched):
         errors.append(f"Invalid schedule expression: {sched}")
     return (len(errors) == 0, errors)
 

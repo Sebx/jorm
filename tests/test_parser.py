@@ -14,4 +14,4 @@ def test_validate_cycles():
     }
     ok, errs = validate_dag(parsed)
     assert not ok
-    assert any("cíclic" in e or "cycle" in e for e in errs)
+    assert any("cyclic" in e.lower() or "cycle" in e.lower() for e in errs)
