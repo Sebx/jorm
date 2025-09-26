@@ -146,19 +146,18 @@ impl CronScheduler {
                                             let running_jobs_guard = running_jobs.read().await;
                                             let is_running = running_jobs_guard.contains_key(&job.id);
 
-                                            let should_run = match job.config.overlap_policy {
-                                                OverlapPolicy::Allow => true,
-                                                OverlapPolicy::Skip => !is_running,
-                                                OverlapPolicy::Queue => !is_running, // TODO: Implement proper queuing
-                                                OverlapPolicy::Cancel => {
-                                                    if is_running {
-                                                        // Cancel the running job
-                                                        if let Some(handle) = running_jobs_guard.get(&job.id) {
-                                                            handle.abort();
-                                                        }
+                                            let should_run = if matches!(job.config.overlap_policy, OverlapPolicy::Allow) {
+                                                true
+                                            } else if matches!(job.config.overlap_policy, OverlapPolicy::Skip | OverlapPolicy::Queue) {
+                                                !is_running
+                                            } else /* Cancel */ {
+                                                if is_running {
+                                                    // Cancel the running job
+                                                    if let Some(handle) = running_jobs_guard.get(&job.id) {
+                                                        handle.abort();
                                                     }
-                                                    true
                                                 }
+                                                true
                                             };
 
                                             if should_run {

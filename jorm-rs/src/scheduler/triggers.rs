@@ -151,10 +151,7 @@ impl WebhookTrigger {
 // TODO: Implement webhook request handling when hyper is properly configured
 
 fn should_trigger_on_event(event: &Event) -> bool {
-    match &event.kind {
-        EventKind::Create(_) | EventKind::Modify(_) => true,
-        _ => false,
-    }
+    matches!(&event.kind, EventKind::Create(_) | EventKind::Modify(_))
 }
 
 pub struct ManualTrigger {
