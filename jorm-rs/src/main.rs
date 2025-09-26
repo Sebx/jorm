@@ -132,7 +132,7 @@ async fn run_dag(file: &str, no_validate: bool) -> Result<()> {
     let dag = parse_dag_file(file).await?;
 
     // Debug: show parsed DAG structure to help with integration test failures
-    println!("DEBUG: parsed DAG -> {:#?}", dag);
+    println!("DEBUG: parsed DAG -> {dag:#?}");
 
     // Validate if not skipped
     if !no_validate {
@@ -156,7 +156,7 @@ async fn run_dag(file: &str, no_validate: bool) -> Result<()> {
                 println!("{}", "✅ DAG execution completed successfully".green());
             } else {
                 println!("{}", "❌ DAG execution failed".red());
-                println!("Execution result: {:#?}", result);
+                println!("Execution result: {result:#?}");
                 anyhow::bail!("DAG execution failed");
             }
         }
@@ -165,7 +165,7 @@ async fn run_dag(file: &str, no_validate: bool) -> Result<()> {
             println!("{}", format!("❌ DAG execution failed: {e}").red());
             let mut source = e.source();
             while let Some(s) = source {
-                println!("Caused by: {}", s);
+                println!("Caused by: {s}");
                 source = s.source();
             }
             anyhow::bail!("DAG execution failed");

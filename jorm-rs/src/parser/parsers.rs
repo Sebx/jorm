@@ -18,7 +18,7 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
         if line.is_empty() || line.starts_with('#') {
             // Preserve blank lines inside script blocks
             if in_script {
-                task_script.push_str("\n");
+                task_script.push('\n');
             }
             continue;
         }
