@@ -286,8 +286,8 @@ impl JormDAGHandler {
 
         // JormDAG metadata block
         header.push_str("# JORMDAG:\n");
-        header.push_str(&format!("# name: {}\n", metadata.name));
-        header.push_str(&format!("# version: {}\n", metadata.version));
+    header.push_str(&format!("# name: {name}\n", name = metadata.name));
+    header.push_str(&format!("# version: {version}\n", version = metadata.version));
 
         if let Some(description) = &metadata.description {
             header.push_str(&format!("# description: {description}\n"));
@@ -314,25 +314,25 @@ impl JormDAGHandler {
         }
 
         if !metadata.tags.is_empty() {
-            header.push_str(&format!("# tags: {}\n", metadata.tags.join(", ")));
+            header.push_str(&format!("# tags: {tags}\n", tags = metadata.tags.join(", ")));
         }
 
         if !metadata.dependencies.is_empty() {
             header.push_str(&format!(
-                "# dependencies: {}\n",
-                metadata.dependencies.join(", ")
+                "# dependencies: {deps}\n",
+                deps = metadata.dependencies.join(", ")
             ));
         }
 
         if !metadata.requirements.is_empty() {
             header.push_str(&format!(
-                "# requirements: {}\n",
-                metadata.requirements.join(", ")
+                "# requirements: {reqs}\n",
+                reqs = metadata.requirements.join(", ")
             ));
         }
 
-        header.push_str(&format!("# created_at: {}\n", metadata.created_at));
-        header.push_str(&format!("# updated_at: {}\n", metadata.updated_at));
+    header.push_str(&format!("# created_at: {created}\n", created = metadata.created_at));
+    header.push_str(&format!("# updated_at: {updated}\n", updated = metadata.updated_at));
         header.push_str("# END JORMDAG\n");
         header.push('\n');
 
