@@ -89,7 +89,22 @@ impl JormDAGHandler {
             let start_pos = start_match.end();
             if let Some(end_match) = end_regex.find(&content[start_pos..]) {
                 let end_pos = start_pos + end_match.start();
-                return Some(content[start_pos..end_pos].to_string());
+                // Normalize the block: strip leading '#' from each line to allow commented metadata
+                let raw_block = &content[start_pos..end_pos];
+                let normalized: String = raw_block
+                    .lines()
+                    .map(|l| {
+                        let s = l.trim_start();
+                        if let Some(stripped) = s.strip_prefix('#') {
+                            stripped.trim_start().to_string()
+                        } else {
+                            l.to_string()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+
+                return Some(normalized);
             }
         }
 

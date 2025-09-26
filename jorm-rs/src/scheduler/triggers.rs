@@ -208,9 +208,14 @@ mod tests {
         let trigger = ManualTrigger::new(scheduler.clone());
 
         // Add a test job
+        // create a temporary DAG file so execution can parse it if triggered
+        let tmp_dir = tempfile::tempdir().unwrap();
+        let dag_path = tmp_dir.path().join("test.yaml");
+        std::fs::write(&dag_path, "dag: test_job\n").unwrap();
+
         let job = crate::scheduler::ScheduledJob::new(
             "test_job".to_string(),
-            "test.yaml".to_string(),
+            dag_path.to_string_lossy().to_string(),
             crate::scheduler::Schedule::Manual,
         );
         let job_id = scheduler.add_job(job).await.unwrap();

@@ -8,18 +8,74 @@ use anyhow::Result;
 /// Parse a DAG file and return the DAG structure
 pub async fn parse_dag_file(file_path: &str) -> Result<Dag> {
     let content = tokio::fs::read_to_string(file_path).await?;
-
-    // Detect format based on content
-    if content.trim().starts_with("dag:") || content.contains("script: |") {
-        // YAML format
-        parsers::parse_yaml(&content)
+    // Detect format based on content and choose an initial parser.
+    // Prioritize Markdown-ish inputs containing headings, but prefer the
+    // forgiving text parser when there's an explicit `tasks:` block because
+    // AI-generated DAGs often mix prose + indented task configs.
+    let mut dag = if content.contains("##") {
+        if content.contains("tasks:") {
+            parsers::parse_txt(&content)?
+        } else {
+            parsers::parse_md(&content)?
+        }
+    } else if content.trim().starts_with("dag:") {
+        parsers::parse_yaml(&content)?
     } else if content.contains("tasks:") && content.contains("- ") {
-        // Markdown format
-        parsers::parse_md(&content)
+        parsers::parse_txt(&content)?
+    } else if content.contains("script: |") {
+        parsers::parse_yaml(&content)?
     } else {
-        // Text format (default)
-        parsers::parse_txt(&content)
+        parsers::parse_txt(&content)?
+    };
+
+    // If name is missing, try to extract a human-friendly title from the
+    // first non-empty non-comment line (AI-generated DAGs often start with
+    // a plain English title rather than a `dag:` field).
+    if dag.name.is_empty() {
+        if let Some(title) = extract_title_from_content(&content) {
+            dag.name = title;
+        }
     }
+
+    // If the initially chosen parser produced no tasks, try alternative
+    // parsers as a fallback and pick the first one that yields tasks.
+    if dag.tasks.is_empty() {
+        let parsers_to_try: [&dyn Fn(&str) -> Result<Dag>; 3] = [&parsers::parse_txt, &parsers::parse_md, &parsers::parse_yaml];
+        for p in parsers_to_try.iter() {
+            if let Ok(candidate) = p(&content) {
+                if !candidate.tasks.is_empty() {
+                    // preserve any already-extracted name if the candidate has none
+                    let mut merged = candidate;
+                    if merged.name.is_empty() {
+                        merged.name = dag.name.clone();
+                    }
+                    dag = merged;
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(dag)
+}
+
+fn extract_title_from_content(content: &str) -> Option<String> {
+    for line in content.lines() {
+        let s = line.trim();
+        if s.is_empty() {
+            continue;
+        }
+        // Skip obvious section headers that are not a title
+        let lower = s.to_lowercase();
+        if lower.starts_with("##") || lower.starts_with("tasks:") || lower.starts_with("this dag") || lower.starts_with("dag:") {
+            continue;
+        }
+        // Use the first reasonably sized line as the title
+        if s.len() > 3 {
+            return Some(s.to_string());
+        }
+    }
+    None
 }
 
 /// Validate a DAG structure

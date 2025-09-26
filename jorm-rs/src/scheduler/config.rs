@@ -7,10 +7,15 @@ use tera::Tera;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(Default)]
 pub struct SchedulerConfig {
+    #[serde(default)]
     pub daemon: DaemonConfig,
+    #[serde(default)]
     pub scheduler: SchedulerSettings,
+    #[serde(default)]
     pub triggers: TriggerConfig,
+    #[serde(default)]
     pub templates: TemplateConfig,
+    #[serde(default)]
     pub environments: HashMap<String, EnvironmentConfig>,
 }
 
@@ -23,6 +28,7 @@ pub struct DaemonConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SchedulerSettings {
     pub check_interval_seconds: u64,
     pub job_timeout_seconds: u64,

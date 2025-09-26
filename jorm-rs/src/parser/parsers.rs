@@ -13,8 +13,13 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
     let mut in_script = false;
 
     for line in content.lines() {
-        let line = line.trim();
+        let raw = line; // preserve original line for script blocks
+        let line = raw.trim();
         if line.is_empty() || line.starts_with('#') {
+            // Preserve blank lines inside script blocks
+            if in_script {
+                task_script.push_str("\n");
+            }
             continue;
         }
 
@@ -36,8 +41,9 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
                         if let Some(mut task) = current_task.take() {
                             // Assign script to previous task before saving
                             if !task_script.is_empty() {
-                                // Trim only trailing whitespace to preserve indentation
-                                let script = task_script.trim_end().to_string();
+                                // Trim trailing whitespace and dedent so Python
+                                // scripts don't have unexpected top-level indentation.
+                                let script = dedent(task_script.trim_end());
                                 task.config.script = Some(script);
                             }
                             dag.add_task(task);
@@ -85,8 +91,9 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
                 task_script.clear();
             } else if in_script {
                 // Continue collecting script content
-                // Preserve the original line including leading whitespace
-                task_script.push_str(line);
+                // Preserve the original line including leading whitespace so
+                // Python indentation is kept intact.
+                task_script.push_str(raw);
                 task_script.push('\n');
             } else if !line.starts_with("  ") && !line.starts_with("\t") && !line.trim().is_empty()
             {
@@ -100,8 +107,9 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
     // Save the last task if exists
     if let Some(mut task) = current_task.take() {
         if !task_script.is_empty() {
-            // Trim only trailing whitespace to preserve indentation
-            let script = task_script.trim_end().to_string();
+            // Trim trailing whitespace and dedent script block so Python
+            // scripts don't have unexpected top-level indentation.
+            let script = dedent(task_script.trim_end());
             task.config.script = Some(script);
         }
         dag.add_task(task);
@@ -230,6 +238,42 @@ fn parse_dependency_txt(item: &str) -> Option<(String, String)> {
         caps.get(1)?.as_str().trim().to_string(),
         caps.get(2)?.as_str().trim().to_string(),
     ))
+}
+
+fn dedent(s: &str) -> String {
+    // Find minimal leading indent (spaces) across non-empty lines
+    let mut min_indent: Option<usize> = None;
+    for line in s.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let leading = line.chars().take_while(|c| *c == ' ').count();
+        min_indent = match min_indent {
+            Some(m) => Some(std::cmp::min(m, leading)),
+            None => Some(leading),
+        };
+    }
+
+    let indent = min_indent.unwrap_or(0);
+    if indent == 0 {
+        return s.to_string();
+    }
+
+    let mut out = String::new();
+    for line in s.lines() {
+        if line.len() >= indent {
+            out.push_str(&line[indent..]);
+        } else {
+            out.push_str(line);
+        }
+        out.push('\n');
+    }
+    // Remove final added newline if original didn't end with one
+    if !s.ends_with('\n') && out.ends_with('\n') {
+        out.pop();
+    }
+    out
 }
 
 fn parse_dependency_md(item: &str) -> Option<(String, String)> {

@@ -277,7 +277,9 @@ impl DAGAnalysisEngine {
         }
 
         let independent_tasks = in_degree.values().filter(|&&degree| degree == 0).count();
-        independent_tasks > 1
+        // Consider that if there is at least one independent task and more than one task total,
+        // there is an opportunity to parallelize (independent tasks can run while others execute).
+        independent_tasks > 0 && dag.tasks.len() > 1
     }
 
     /// Identify tasks that can run in parallel

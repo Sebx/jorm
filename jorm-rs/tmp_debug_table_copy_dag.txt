@@ -1,0 +1,39 @@
+AI-Generated Table Copy DAG
+
+This is a minimal AI-generated DAG for debugging
+
+tasks:
+- copy_table_step1
+  type: python
+  script: |
+    import csv
+    source_file = r"./tmp_debug/table1.csv"
+    target_file = "table2.csv"
+    with open(source_file, 'r') as src, open(target_file, 'w', newline='') as dst:
+        reader = csv.reader(src)
+        writer = csv.writer(dst)
+        headers = next(reader)
+        writer.writerow(headers)
+        for row in reader:
+            writer.writerow(row)
+- verify_copy_step2
+  type: python
+  script: |
+    import csv
+    source_file = r"./tmp_debug/table1.csv"
+    target_file = "table2.csv"
+    with open(source_file, 'r') as f:
+        source_reader = csv.reader(f)
+        source_headers = next(source_reader)
+        source_rows = list(source_reader)
+    with open(target_file, 'r') as f:
+        target_reader = csv.reader(f)
+        target_headers = next(target_reader)
+        target_rows = list(target_reader)
+    if source_rows == target_rows and source_headers == target_headers:
+        print('ok')
+    else:
+        exit(1)
+
+dependencies:
+- verify_copy_step2 after copy_table_step1
