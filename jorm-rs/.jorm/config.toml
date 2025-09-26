@@ -1,0 +1,10 @@
+
+# Windows-specific configuration
+shell = "cmd"
+python_cmd = "python"
+file_operations = {
+    copy = "copy"
+    move = "move"
+    delete = "del"
+    list = "dir"
+}
