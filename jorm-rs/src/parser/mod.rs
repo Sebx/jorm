@@ -18,10 +18,14 @@ pub async fn parse_dag_file(file_path: &str) -> Result<Dag> {
         } else {
             parsers::parse_md(&content)?
         }
+    } else if content.contains("tasks:") && content.contains("- ") {
+        // Prefer the permissive text parser when there's an explicit tasks list
+        // with dash-prefixed items. Some DAGs (and AI-generated content)
+        // start with `dag:` but use a plain text/list style rather than
+        // strict YAML mapping, so prefer parse_txt in that case.
+        parsers::parse_txt(&content)?
     } else if content.trim().starts_with("dag:") {
         parsers::parse_yaml(&content)?
-    } else if content.contains("tasks:") && content.contains("- ") {
-        parsers::parse_txt(&content)?
     } else if content.contains("script: |") {
         parsers::parse_yaml(&content)?
     } else {
