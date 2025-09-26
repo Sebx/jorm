@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -275,7 +275,7 @@ impl DataFlowManager {
 
     async fn store_to_file(
         &self,
-        base_path: &PathBuf,
+        base_path: &Path,
         execution_id: &Uuid,
         data: OutputData,
     ) -> Result<OutputData> {
@@ -301,7 +301,7 @@ impl DataFlowManager {
 
     async fn load_from_file(
         &self,
-        base_path: &PathBuf,
+        base_path: &Path,
         execution_id: &Uuid,
     ) -> Result<Option<OutputData>> {
         let file_path = base_path.join(format!("{execution_id}.json"));
@@ -320,7 +320,7 @@ impl DataFlowManager {
         Ok(Some(data))
     }
 
-    async fn delete_from_file(&self, base_path: &PathBuf, execution_id: &Uuid) -> Result<()> {
+    async fn delete_from_file(&self, base_path: &Path, execution_id: &Uuid) -> Result<()> {
         let file_path = base_path.join(format!("{execution_id}.json"));
 
         if file_path.exists() {

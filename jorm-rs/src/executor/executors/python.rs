@@ -53,9 +53,10 @@ impl PythonTaskExecutor {
         };
 
         for candidate in &candidates {
-            if let Ok(_) = std::process::Command::new(candidate)
+            if std::process::Command::new(candidate)
                 .arg("--version")
                 .output()
+                .is_ok()
             {
                 return candidate.to_string();
             }
