@@ -21,13 +21,13 @@ impl SchedulerDaemon {
         }
     }
 
-    pub fn with_pid_file(mut self, pid_file: PathBuf) -> Self {
-        self.pid_file = Some(pid_file);
+    pub fn with_pid_file(mut self, pid_file: impl Into<std::path::PathBuf>) -> Self {
+        self.pid_file = Some(pid_file.into());
         self
     }
 
-    pub fn with_log_file(mut self, log_file: PathBuf) -> Self {
-        self.log_file = Some(log_file);
+    pub fn with_log_file(mut self, log_file: impl Into<std::path::PathBuf>) -> Self {
+        self.log_file = Some(log_file.into());
         self
     }
 

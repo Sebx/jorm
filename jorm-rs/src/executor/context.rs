@@ -192,13 +192,13 @@ impl ExecutionContext {
     }
 
     /// Get the effective working directory (task-specific or global)
-    pub fn effective_working_directory(&self) -> Option<&std::path::PathBuf> {
-        self.working_directory.as_ref()
+    pub fn effective_working_directory(&self) -> Option<&std::path::Path> {
+        self.working_directory.as_deref()
     }
 
     /// Update the working directory
-    pub fn set_working_directory(&mut self, dir: std::path::PathBuf) {
-        self.working_directory = Some(dir);
+    pub fn set_working_directory(&mut self, dir: impl Into<std::path::PathBuf>) {
+        self.working_directory = Some(dir.into());
     }
 
     /// Get environment variables as a Vec for process execution

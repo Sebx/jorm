@@ -127,8 +127,8 @@ impl ExecutorConfig {
     }
 
     /// Set working directory
-    pub fn with_working_directory(mut self, dir: std::path::PathBuf) -> Self {
-        self.working_directory = Some(dir);
+    pub fn with_working_directory(mut self, dir: impl Into<std::path::PathBuf>) -> Self {
+        self.working_directory = Some(dir.into());
         self
     }
 
