@@ -72,13 +72,13 @@ impl From<std::io::Error> for ExecutorError {
 impl ExecutorError {
     /// Check if this error should trigger a retry
     pub fn should_retry(&self) -> bool {
-        match self {
-            ExecutorError::TaskTimeout { .. } => true,
-            ExecutorError::ResourceLimitExceeded { .. } => true,
-            ExecutorError::IoError { .. } => true,
-            ExecutorError::TaskExecutionFailed { .. } => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            ExecutorError::TaskTimeout { .. }
+                | ExecutorError::ResourceLimitExceeded { .. }
+                | ExecutorError::IoError { .. }
+                | ExecutorError::TaskExecutionFailed { .. }
+        )
     }
 
     /// Get the task ID associated with this error, if any
@@ -94,12 +94,12 @@ impl ExecutorError {
 
     /// Check if this is a recoverable error
     pub fn is_recoverable(&self) -> bool {
-        match self {
-            ExecutorError::DependencyCycle => false,
-            ExecutorError::UnsupportedTaskType { .. } => false,
-            ExecutorError::ConfigurationError { .. } => false,
-            ExecutorError::SerializationError(_) => false,
-            _ => true,
-        }
+        !matches!(
+            self,
+            ExecutorError::DependencyCycle
+                | ExecutorError::UnsupportedTaskType { .. }
+                | ExecutorError::ConfigurationError { .. }
+                | ExecutorError::SerializationError(_)
+        )
     }
 }
