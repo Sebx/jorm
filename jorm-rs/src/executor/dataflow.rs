@@ -237,7 +237,7 @@ impl DataFlowManager {
 
         // Replace ${task_name.output} patterns
         for (task_id, output) in &self.outputs {
-            let pattern = format!("${{{}.output}}", task_id);
+            let pattern = format!("${{{task_id}.output}}");
             if let Ok(output_str) = self.output_to_string(&output.data) {
                 result = result.replace(&pattern, &output_str);
             }
@@ -279,7 +279,7 @@ impl DataFlowManager {
         execution_id: &Uuid,
         data: OutputData,
     ) -> Result<OutputData> {
-        let file_path = base_path.join(format!("{}.json", execution_id));
+        let file_path = base_path.join(format!("{execution_id}.json"));
 
         // Ensure directory exists
         if let Some(parent) = file_path.parent() {
@@ -304,7 +304,7 @@ impl DataFlowManager {
         base_path: &PathBuf,
         execution_id: &Uuid,
     ) -> Result<Option<OutputData>> {
-        let file_path = base_path.join(format!("{}.json", execution_id));
+        let file_path = base_path.join(format!("{execution_id}.json"));
 
         if !file_path.exists() {
             return Ok(None);
@@ -321,7 +321,7 @@ impl DataFlowManager {
     }
 
     async fn delete_from_file(&self, base_path: &PathBuf, execution_id: &Uuid) -> Result<()> {
-        let file_path = base_path.join(format!("{}.json", execution_id));
+        let file_path = base_path.join(format!("{execution_id}.json"));
 
         if file_path.exists() {
             tokio::fs::remove_file(&file_path)

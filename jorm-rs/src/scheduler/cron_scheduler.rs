@@ -270,7 +270,7 @@ impl CronScheduler {
     async fn execute_job(&self, job: ScheduledJob) -> Result<()> {
         let executor = Arc::clone(&self.executor);
         let output = Self::execute_job_internal(job, executor).await?;
-        println!("Job execution output: {}", output);
+        println!("Job execution output: {output}");
         Ok(())
     }
 

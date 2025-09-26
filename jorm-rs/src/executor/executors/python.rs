@@ -94,7 +94,7 @@ impl PythonTaskExecutor {
 
         if let Err(e) = std::fs::write(&script_path, script) {
             return Err(ExecutorError::IoError {
-                message: format!("Failed to write Python script: {}", e),
+                message: format!("Failed to write Python script: {e}"),
                 source: e,
             });
         }
@@ -113,7 +113,7 @@ impl PythonTaskExecutor {
         // Set working directory if specified
         if let Some(dir) = working_dir {
             cmd.current_dir(dir);
-            println!("📁 Working directory: {}", dir);
+            println!("📁 Working directory: {dir}");
         }
 
         // Set environment variables from context
@@ -147,12 +147,12 @@ impl PythonTaskExecutor {
                     TaskStatus::Failed
                 };
 
-                println!("🐍 Python script completed with exit code: {}", exit_code);
+                println!("🐍 Python script completed with exit code: {exit_code}");
                 if !stdout.is_empty() {
-                    println!("📤 Output: {}", stdout);
+                    println!("📤 Output: {stdout}");
                 }
                 if !stderr.is_empty() {
-                    println!("⚠️  Errors: {}", stderr);
+                    println!("⚠️  Errors: {stderr}");
                 }
 
                 Ok(TaskResult {
@@ -167,7 +167,7 @@ impl PythonTaskExecutor {
                     retry_count: 0,
                     output_data: None,
                     error_message: if status == TaskStatus::Failed {
-                        Some(format!("Python script failed with exit code {}", exit_code))
+                        Some(format!("Python script failed with exit code {exit_code}"))
                     } else {
                         None
                     },
@@ -175,8 +175,8 @@ impl PythonTaskExecutor {
                 })
             }
             Ok(Err(e)) => {
-                let error_msg = format!("Python execution failed: {}", e);
-                println!("❌ {}", error_msg);
+                let error_msg = format!("Python execution failed: {e}");
+                println!("❌ {error_msg}");
 
                 Err(ExecutorError::TaskExecutionFailed {
                     task_id: context.task_id.clone(),
@@ -184,8 +184,8 @@ impl PythonTaskExecutor {
                 })
             }
             Err(_timeout_error) => {
-                let error_msg = format!("Python script timed out after {:?}", task_timeout);
-                println!("⏰ {}", error_msg);
+                let error_msg = format!("Python script timed out after {task_timeout:?}");
+                println!("⏰ {error_msg}");
 
                 Err(ExecutorError::TaskTimeout {
                     task_id: context.task_id.clone(),
@@ -210,7 +210,7 @@ impl PythonTaskExecutor {
         let started_at = Utc::now();
 
         // Create Python code to call the function
-        let mut python_code = format!("import sys\nimport json\nimport {}\n\n", module);
+        let mut python_code = format!("import sys\nimport json\nimport {module}\n\n");
 
         // Add argument handling
         if !args.is_empty() {
@@ -230,20 +230,19 @@ impl PythonTaskExecutor {
         // Add function call
         if !args.is_empty() && !kwargs.is_empty() {
             python_code.push_str(&format!(
-                "result = {}.{}(*args, **kwargs)\n",
-                module, function
+                "result = {module}.{function}(*args, **kwargs)\n"
             ));
         } else if !args.is_empty() {
-            python_code.push_str(&format!("result = {}.{}(*args)\n", module, function));
+            python_code.push_str(&format!("result = {module}.{function}(*args)\n"));
         } else if !kwargs.is_empty() {
-            python_code.push_str(&format!("result = {}.{}(**kwargs)\n", module, function));
+            python_code.push_str(&format!("result = {module}.{function}(**kwargs)\n"));
         } else {
-            python_code.push_str(&format!("result = {}.{}()\n", module, function));
+            python_code.push_str(&format!("result = {module}.{function}()\n"));
         }
 
         python_code.push_str("print(json.dumps(result, default=str))\n");
 
-        println!("🐍 Executing Python function: {}.{}", module, function);
+        println!("🐍 Executing Python function: {module}.{function}");
 
         // Execute as a script
         self.execute_python_script(&python_code, &[], working_dir, context, task_timeout)

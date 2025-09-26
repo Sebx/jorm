@@ -120,13 +120,13 @@ enum Commands {
 
 fn validate_file_exists(file: &str) -> Result<()> {
     if !Path::new(file).exists() {
-        anyhow::bail!("File not found: {}", file);
+        anyhow::bail!("File not found: {file}");
     }
     Ok(())
 }
 
 async fn run_dag(file: &str, no_validate: bool) -> Result<()> {
-    println!("{}", format!("🚀 Running DAG: {}", file).cyan());
+    println!("{}", format!("🚀 Running DAG: {file}").cyan());
 
     // Parse the DAG
     let dag = parse_dag_file(file).await?;
@@ -137,7 +137,7 @@ async fn run_dag(file: &str, no_validate: bool) -> Result<()> {
         if !errors.is_empty() {
             println!("{}", "❌ Invalid DAG. Errors:".red());
             for error in errors {
-                println!("  - {}", error);
+                println!("  - {error}");
             }
             anyhow::bail!("DAG validation failed");
         }
@@ -157,7 +157,7 @@ async fn run_dag(file: &str, no_validate: bool) -> Result<()> {
             }
         }
         Err(e) => {
-            println!("{}", format!("❌ DAG execution failed: {}", e).red());
+            println!("{}", format!("❌ DAG execution failed: {e}").red());
             anyhow::bail!("DAG execution failed");
         }
     }
@@ -166,7 +166,7 @@ async fn run_dag(file: &str, no_validate: bool) -> Result<()> {
 }
 
 async fn validate_dag_command(file: &str) -> Result<()> {
-    println!("{}", format!("🔍 Validating DAG: {}", file).cyan());
+    println!("{}", format!("🔍 Validating DAG: {file}").cyan());
 
     let dag = parse_dag_file(file).await?;
     let errors = validate_dag(&dag)?;
@@ -176,7 +176,7 @@ async fn validate_dag_command(file: &str) -> Result<()> {
     } else {
         println!("{}", "❌ Invalid DAG. Errors:".red());
         for error in errors {
-            println!("  - {}", error);
+            println!("  - {error}");
         }
         anyhow::bail!("DAG validation failed");
     }
@@ -185,13 +185,13 @@ async fn validate_dag_command(file: &str) -> Result<()> {
 }
 
 async fn describe_dag(file: &str) -> Result<()> {
-    println!("{}", format!("📋 Describing DAG: {}", file).cyan());
+    println!("{}", format!("📋 Describing DAG: {file}").cyan());
 
     let dag = parse_dag_file(file).await?;
 
     println!("DAG: {}", dag.name);
     if let Some(schedule) = &dag.schedule {
-        println!("Schedule: {}", schedule);
+        println!("Schedule: {schedule}");
     }
 
     let task_names: Vec<String> = dag.tasks.keys().cloned().collect();
@@ -208,7 +208,7 @@ async fn describe_dag(file: &str) -> Result<()> {
 }
 
 async fn exec_task(task: &str) -> Result<()> {
-    println!("{}", format!("⚡ Executing task: {}", task).cyan());
+    println!("{}", format!("⚡ Executing task: {task}").cyan());
     println!(
         "{}",
         "Note: Single task execution requires a DAG context".yellow()
@@ -238,7 +238,7 @@ async fn list_dags() -> Result<()> {
 }
 
 async fn schedule_dag(file: &str, cron_expr: Option<&str>, name: Option<&str>) -> Result<()> {
-    println!("{}", format!("⏰ Scheduling DAG: {}", file).cyan());
+    println!("{}", format!("⏰ Scheduling DAG: {file}").cyan());
 
     let schedule = if let Some(cron) = cron_expr {
         Schedule::Cron(cron.to_string())
@@ -263,10 +263,10 @@ async fn schedule_dag(file: &str, cron_expr: Option<&str>, name: Option<&str>) -
 
     // For now, just print what would be scheduled
     // In a full implementation, this would connect to a running scheduler daemon
-    println!("✅ Job '{}' would be scheduled with:", job_name);
-    println!("   File: {}", file);
+    println!("✅ Job '{job_name}' would be scheduled with:");
+    println!("   File: {file}");
     match &job.schedule {
-        Schedule::Cron(expr) => println!("   Schedule: {}", expr),
+        Schedule::Cron(expr) => println!("   Schedule: {expr}"),
         _ => println!("   Schedule: Manual"),
     }
     println!("   Job ID: {}", job.id);
@@ -330,7 +330,7 @@ async fn list_jobs(enabled_only: bool) -> Result<()> {
 async fn trigger_job(job_identifier: &str) -> Result<()> {
     println!(
         "{}",
-        format!("⚡ Triggering job: {}", job_identifier).cyan()
+        format!("⚡ Triggering job: {job_identifier}").cyan()
     );
 
     // In a full implementation, this would connect to the running scheduler
@@ -363,7 +363,7 @@ async fn start_interactive() -> Result<()> {
 }
 
 async fn analyze_dag(file: &str) -> Result<()> {
-    println!("{}", format!("🔍 Analyzing DAG: {}", file).cyan());
+    println!("{}", format!("🔍 Analyzing DAG: {file}").cyan());
 
     // Parse the DAG file
     let dag = parse_dag_file(file).await?;
@@ -419,7 +419,7 @@ async fn analyze_dag(file: &str) -> Result<()> {
             }
         }
         Err(e) => {
-            println!("{}", format!("❌ Analysis failed: {}", e).red());
+            println!("{}", format!("❌ Analysis failed: {e}").red());
             show_basic_dag_analysis(&dag).await;
         }
     }
@@ -430,7 +430,7 @@ async fn analyze_dag(file: &str) -> Result<()> {
 async fn generate_dag(description: &str, output_path: Option<&str>) -> Result<()> {
     println!(
         "{}",
-        format!("🚀 Generating DAG from: {}", description).cyan()
+        format!("🚀 Generating DAG from: {description}").cyan()
     );
 
     // Create AI service
@@ -460,16 +460,16 @@ async fn generate_dag(description: &str, output_path: Option<&str>) -> Result<()
             if let Some(path) = output_path {
                 let yaml_content = serde_yaml::to_string(&dag)?;
                 tokio::fs::write(path, yaml_content).await?;
-                println!("💾 Saved to: {}", path);
+                println!("💾 Saved to: {path}");
             } else {
                 // Print YAML to stdout
                 let yaml_content = serde_yaml::to_string(&dag)?;
                 println!("\n{}", "Generated DAG (YAML):".bold());
-                println!("{}", yaml_content);
+                println!("{yaml_content}");
             }
         }
         Err(e) => {
-            println!("{}", format!("❌ Generation failed: {}", e).red());
+            println!("{}", format!("❌ Generation failed: {e}").red());
             return generate_basic_dag(description, output_path).await;
         }
     }
@@ -499,7 +499,7 @@ async fn show_model_info() -> Result<()> {
     );
     println!("Capabilities:");
     for capability in &model_info.capabilities {
-        println!("  • {}", capability);
+        println!("  • {capability}");
     }
 
     Ok(())
@@ -512,13 +512,13 @@ async fn show_basic_dag_analysis(dag: &crate::parser::Dag) {
     println!("Dependencies: {}", dag.dependencies.len());
 
     if let Some(schedule) = &dag.schedule {
-        println!("Schedule: {}", schedule);
+        println!("Schedule: {schedule}");
     }
 
     // Show task names
     println!("Task Names:");
     for task_name in dag.tasks.keys() {
-        println!("  • {}", task_name);
+        println!("  • {task_name}");
     }
 
     // Show dependencies
@@ -554,12 +554,12 @@ async fn generate_basic_dag(description: &str, output_path: Option<&str>) -> Res
     if let Some(path) = output_path {
         let yaml_content = serde_yaml::to_string(&dag)?;
         tokio::fs::write(path, yaml_content).await?;
-        println!("💾 Saved to: {}", path);
+        println!("💾 Saved to: {path}");
     } else {
         // Print YAML to stdout
         let yaml_content = serde_yaml::to_string(&dag)?;
         println!("\n{}", "Generated DAG (YAML):".bold());
-        println!("{}", yaml_content);
+        println!("{yaml_content}");
     }
 
     Ok(())
@@ -686,23 +686,23 @@ async fn setup_environment(force: bool, skip_python: bool, skip_shell: bool) -> 
 
     // Detect platform
     let platform = detect_platform();
-    println!("{}", format!("📱 Detected platform: {}", platform).blue());
+    println!("{}", format!("📱 Detected platform: {platform}").blue());
 
     // Check Python installation
     if !skip_python {
         match check_python_installation().await {
             Ok(version) => {
-                println!("{}", format!("✅ Python {} is available", version).green());
+                println!("{}", format!("✅ Python {version} is available").green());
             }
             Err(e) => {
-                println!("{}", format!("❌ Python not found: {}", e).red());
+                println!("{}", format!("❌ Python not found: {e}").red());
                 issues.push("Python not installed or not in PATH".to_string());
 
                 // Provide platform-specific installation instructions
                 let python_install_cmd = get_python_install_command(&platform);
                 println!(
                     "{}",
-                    format!("💡 To install Python: {}", python_install_cmd).yellow()
+                    format!("💡 To install Python: {python_install_cmd}").yellow()
                 );
                 fixes_applied.push("Python installation instructions provided".to_string());
             }
@@ -715,11 +715,11 @@ async fn setup_environment(force: bool, skip_python: bool, skip_shell: bool) -> 
         for cmd in shell_commands {
             match check_shell_command(&cmd).await {
                 Ok(_) => {
-                    println!("{}", format!("✅ Command '{}' is available", cmd).green());
+                    println!("{}", format!("✅ Command '{cmd}' is available").green());
                 }
                 Err(_) => {
-                    println!("{}", format!("❌ Command '{}' not found", cmd).red());
-                    issues.push(format!("Command '{}' not available", cmd));
+                    println!("{}", format!("❌ Command '{cmd}' not found").red());
+                    issues.push(format!("Command '{cmd}' not available"));
 
                     // Provide alternative commands for Windows
                     if platform == "Windows" {
@@ -727,10 +727,10 @@ async fn setup_environment(force: bool, skip_python: bool, skip_shell: bool) -> 
                         if let Some(alt) = alt_cmd {
                             println!(
                                 "{}",
-                                format!("💡 Use '{}' instead on Windows", alt).yellow()
+                                format!("💡 Use '{alt}' instead on Windows").yellow()
                             );
                             fixes_applied
-                                .push(format!("Windows alternative for '{}': '{}'", cmd, alt));
+                                .push(format!("Windows alternative for '{cmd}': '{alt}'"));
                         }
                     }
                 }
@@ -741,10 +741,10 @@ async fn setup_environment(force: bool, skip_python: bool, skip_shell: bool) -> 
     // Check Rust installation
     match check_rust_installation().await {
         Ok(version) => {
-            println!("{}", format!("✅ Rust {} is available", version).green());
+            println!("{}", format!("✅ Rust {version} is available").green());
         }
         Err(e) => {
-            println!("{}", format!("❌ Rust not found: {}", e).red());
+            println!("{}", format!("❌ Rust not found: {e}").red());
             issues.push("Rust not installed".to_string());
             println!("{}", "💡 Install Rust from https://rustup.rs/".yellow());
             fixes_applied.push("Rust installation instructions provided".to_string());
@@ -754,7 +754,7 @@ async fn setup_environment(force: bool, skip_python: bool, skip_shell: bool) -> 
     // Check jorm-rs installation
     match check_jorm_installation().await {
         Ok(version) => {
-            println!("{}", format!("✅ jorm-rs {} is installed", version).green());
+            println!("{}", format!("✅ jorm-rs {version} is installed").green());
         }
         Err(_) => {
             println!("{}", "❌ jorm-rs not found in PATH".red());
@@ -788,14 +788,14 @@ async fn setup_environment(force: bool, skip_python: bool, skip_shell: bool) -> 
                 .bold()
         );
         for issue in &issues {
-            println!("  • {}", issue);
+            println!("  • {issue}");
         }
     }
 
     if !fixes_applied.is_empty() {
         println!("\n{}", "🔧 Fixes Applied:".blue().bold());
         for fix in &fixes_applied {
-            println!("  ✅ {}", fix);
+            println!("  ✅ {fix}");
         }
     }
 

@@ -40,7 +40,7 @@ impl FileTaskExecutor {
         let start_time = Instant::now();
         let started_at = Utc::now();
 
-        println!("📁 Copying file: {} -> {}", source, destination);
+        println!("📁 Copying file: {source} -> {destination}");
 
         let source_path = Path::new(source);
         let dest_path = Path::new(destination);
@@ -48,7 +48,7 @@ impl FileTaskExecutor {
         // Validate source file exists
         if !source_path.exists() {
             return Err(ExecutorError::ConfigurationError {
-                message: format!("Source file does not exist: {}", source),
+                message: format!("Source file does not exist: {source}"),
             });
         }
 
@@ -65,8 +65,7 @@ impl FileTaskExecutor {
                         ExecutorError::TaskExecutionFailed {
                             task_id: context.task_id.clone(),
                             source: anyhow::anyhow!(
-                                "Failed to create destination directory: {}",
-                                e
+                                "Failed to create destination directory: {e}"
                             ),
                         }
                     })?;
@@ -91,7 +90,7 @@ impl FileTaskExecutor {
 
             if !overwrite {
                 return Err(ExecutorError::ConfigurationError {
-                    message: format!("Destination file already exists: {}", destination),
+                    message: format!("Destination file already exists: {destination}"),
                 });
             }
         }
@@ -104,7 +103,7 @@ impl FileTaskExecutor {
 
         match copy_result {
             Ok(bytes_copied) => {
-                println!("✅ File copied successfully: {} bytes", bytes_copied);
+                println!("✅ File copied successfully: {bytes_copied} bytes");
 
                 let mut metadata = HashMap::new();
                 metadata.insert("operation".to_string(), serde_json::json!("copy"));
@@ -116,8 +115,7 @@ impl FileTaskExecutor {
                     task_id: context.task_id.clone(),
                     status: TaskStatus::Success,
                     stdout: format!(
-                        "Copied {} bytes from {} to {}",
-                        bytes_copied, source, destination
+                        "Copied {bytes_copied} bytes from {source} to {destination}"
                     ),
                     stderr: String::new(),
                     exit_code: Some(0),
@@ -136,8 +134,8 @@ impl FileTaskExecutor {
                 })
             }
             Err(e) => {
-                let error_msg = format!("Failed to copy file: {}", e);
-                println!("❌ {}", error_msg);
+                let error_msg = format!("Failed to copy file: {e}");
+                println!("❌ {error_msg}");
 
                 Err(ExecutorError::TaskExecutionFailed {
                     task_id: context.task_id.clone(),
@@ -157,7 +155,7 @@ impl FileTaskExecutor {
         let start_time = Instant::now();
         let started_at = Utc::now();
 
-        println!("📁 Moving file: {} -> {}", source, destination);
+        println!("📁 Moving file: {source} -> {destination}");
 
         let source_path = Path::new(source);
         let dest_path = Path::new(destination);
@@ -165,7 +163,7 @@ impl FileTaskExecutor {
         // Validate source file exists
         if !source_path.exists() {
             return Err(ExecutorError::ConfigurationError {
-                message: format!("Source file does not exist: {}", source),
+                message: format!("Source file does not exist: {source}"),
             });
         }
 
@@ -174,7 +172,7 @@ impl FileTaskExecutor {
             .await
             .map_err(|e| ExecutorError::TaskExecutionFailed {
                 task_id: context.task_id.clone(),
-                source: anyhow::anyhow!("Failed to get file metadata: {}", e),
+                source: anyhow::anyhow!("Failed to get file metadata: {e}"),
             })?
             .len();
 
@@ -191,8 +189,7 @@ impl FileTaskExecutor {
                         ExecutorError::TaskExecutionFailed {
                             task_id: context.task_id.clone(),
                             source: anyhow::anyhow!(
-                                "Failed to create destination directory: {}",
-                                e
+                                "Failed to create destination directory: {e}"
                             ),
                         }
                     })?;
@@ -217,7 +214,7 @@ impl FileTaskExecutor {
 
             if !overwrite {
                 return Err(ExecutorError::ConfigurationError {
-                    message: format!("Destination file already exists: {}", destination),
+                    message: format!("Destination file already exists: {destination}"),
                 });
             }
         }
@@ -230,7 +227,7 @@ impl FileTaskExecutor {
 
         match move_result {
             Ok(()) => {
-                println!("✅ File moved successfully: {} bytes", file_size);
+                println!("✅ File moved successfully: {file_size} bytes");
 
                 let mut metadata = HashMap::new();
                 metadata.insert("operation".to_string(), serde_json::json!("move"));
@@ -242,8 +239,7 @@ impl FileTaskExecutor {
                     task_id: context.task_id.clone(),
                     status: TaskStatus::Success,
                     stdout: format!(
-                        "Moved {} bytes from {} to {}",
-                        file_size, source, destination
+                        "Moved {file_size} bytes from {source} to {destination}"
                     ),
                     stderr: String::new(),
                     exit_code: Some(0),
@@ -262,8 +258,8 @@ impl FileTaskExecutor {
                 })
             }
             Err(e) => {
-                let error_msg = format!("Failed to move file: {}", e);
-                println!("❌ {}", error_msg);
+                let error_msg = format!("Failed to move file: {e}");
+                println!("❌ {error_msg}");
 
                 Err(ExecutorError::TaskExecutionFailed {
                     task_id: context.task_id.clone(),
@@ -283,7 +279,7 @@ impl FileTaskExecutor {
         let start_time = Instant::now();
         let started_at = Utc::now();
 
-        println!("🗑️ Deleting file: {}", source);
+        println!("🗑️ Deleting file: {source}");
 
         let source_path = Path::new(source);
 
@@ -295,7 +291,7 @@ impl FileTaskExecutor {
                 .unwrap_or(false);
 
             if ignore_missing {
-                println!("⚠️ File does not exist (ignored): {}", source);
+                println!("⚠️ File does not exist (ignored): {source}");
 
                 let duration = start_time.elapsed();
                 let completed_at = Utc::now();
@@ -308,7 +304,7 @@ impl FileTaskExecutor {
                 return Ok(TaskResult {
                     task_id: context.task_id.clone(),
                     status: TaskStatus::Success,
-                    stdout: format!("File does not exist (ignored): {}", source),
+                    stdout: format!("File does not exist (ignored): {source}"),
                     stderr: String::new(),
                     exit_code: Some(0),
                     duration,
@@ -325,7 +321,7 @@ impl FileTaskExecutor {
                 });
             } else {
                 return Err(ExecutorError::ConfigurationError {
-                    message: format!("Source file does not exist: {}", source),
+                    message: format!("Source file does not exist: {source}"),
                 });
             }
         }
@@ -335,7 +331,7 @@ impl FileTaskExecutor {
             .await
             .map_err(|e| ExecutorError::TaskExecutionFailed {
                 task_id: context.task_id.clone(),
-                source: anyhow::anyhow!("Failed to get file metadata: {}", e),
+                source: anyhow::anyhow!("Failed to get file metadata: {e}"),
             })?
             .len();
 
@@ -360,7 +356,7 @@ impl FileTaskExecutor {
 
         match delete_result {
             Ok(()) => {
-                println!("✅ File deleted successfully: {} bytes", file_size);
+                println!("✅ File deleted successfully: {file_size} bytes");
 
                 let mut metadata = HashMap::new();
                 metadata.insert("operation".to_string(), serde_json::json!("delete"));
@@ -370,7 +366,7 @@ impl FileTaskExecutor {
                 Ok(TaskResult {
                     task_id: context.task_id.clone(),
                     status: TaskStatus::Success,
-                    stdout: format!("Deleted {} bytes from {}", file_size, source),
+                    stdout: format!("Deleted {file_size} bytes from {source}"),
                     stderr: String::new(),
                     exit_code: Some(0),
                     duration,
@@ -387,8 +383,8 @@ impl FileTaskExecutor {
                 })
             }
             Err(e) => {
-                let error_msg = format!("Failed to delete file: {}", e);
-                println!("❌ {}", error_msg);
+                let error_msg = format!("Failed to delete file: {e}");
+                println!("❌ {error_msg}");
 
                 Err(ExecutorError::TaskExecutionFailed {
                     task_id: context.task_id.clone(),
@@ -408,7 +404,7 @@ impl FileTaskExecutor {
         let start_time = Instant::now();
         let started_at = Utc::now();
 
-        println!("📝 Creating file: {}", destination);
+        println!("📝 Creating file: {destination}");
 
         let dest_path = Path::new(destination);
 
@@ -425,8 +421,7 @@ impl FileTaskExecutor {
                         ExecutorError::TaskExecutionFailed {
                             task_id: context.task_id.clone(),
                             source: anyhow::anyhow!(
-                                "Failed to create destination directory: {}",
-                                e
+                                "Failed to create destination directory: {e}"
                             ),
                         }
                     })?;
@@ -451,7 +446,7 @@ impl FileTaskExecutor {
 
             if !overwrite {
                 return Err(ExecutorError::ConfigurationError {
-                    message: format!("Destination file already exists: {}", destination),
+                    message: format!("Destination file already exists: {destination}"),
                 });
             }
         }
@@ -471,7 +466,7 @@ impl FileTaskExecutor {
         match create_result {
             Ok(()) => {
                 let bytes_written = content.len();
-                println!("✅ File created successfully: {} bytes", bytes_written);
+                println!("✅ File created successfully: {bytes_written} bytes");
 
                 let mut metadata = HashMap::new();
                 metadata.insert("operation".to_string(), serde_json::json!("create"));
@@ -484,7 +479,7 @@ impl FileTaskExecutor {
                 Ok(TaskResult {
                     task_id: context.task_id.clone(),
                     status: TaskStatus::Success,
-                    stdout: format!("Created file {} with {} bytes", destination, bytes_written),
+                    stdout: format!("Created file {destination} with {bytes_written} bytes"),
                     stderr: String::new(),
                     exit_code: Some(0),
                     duration,
@@ -501,8 +496,8 @@ impl FileTaskExecutor {
                 })
             }
             Err(e) => {
-                let error_msg = format!("Failed to create file: {}", e);
-                println!("❌ {}", error_msg);
+                let error_msg = format!("Failed to create file: {e}");
+                println!("❌ {error_msg}");
 
                 Err(ExecutorError::TaskExecutionFailed {
                     task_id: context.task_id.clone(),
@@ -580,7 +575,7 @@ impl crate::executor::TaskExecutor for FileTaskExecutor {
                     self.execute_create_operation(dest, options, context).await
                 }
                 _ => Err(ExecutorError::UnsupportedTaskType {
-                    task_type: format!("Unsupported file operation: {}", operation),
+                    task_type: format!("Unsupported file operation: {operation}"),
                 }),
             },
             _ => Err(ExecutorError::UnsupportedTaskType {
@@ -614,12 +609,12 @@ impl crate::executor::TaskExecutor for FileTaskExecutor {
                     "copy" | "move" => {
                         if source.is_none() {
                             return Err(ExecutorError::ConfigurationError {
-                                message: format!("{} operation requires source", operation),
+                                message: format!("{operation} operation requires source"),
                             });
                         }
                         if destination.is_none() {
                             return Err(ExecutorError::ConfigurationError {
-                                message: format!("{} operation requires destination", operation),
+                                message: format!("{operation} operation requires destination"),
                             });
                         }
                     }
@@ -639,7 +634,7 @@ impl crate::executor::TaskExecutor for FileTaskExecutor {
                     }
                     _ => {
                         return Err(ExecutorError::ConfigurationError {
-                            message: format!("Unsupported file operation: {}", operation),
+                            message: format!("Unsupported file operation: {operation}"),
                         });
                     }
                 }

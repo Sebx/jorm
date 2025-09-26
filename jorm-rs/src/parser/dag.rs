@@ -20,6 +20,7 @@ pub struct Task {
 
 /// Task configuration that can be serialized to Python format
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct TaskConfig {
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub task_type: Option<String>,
@@ -265,29 +266,3 @@ impl Task {
     }
 }
 
-impl Default for TaskConfig {
-    fn default() -> Self {
-        Self {
-            task_type: None,
-            command: None,
-            module: None,
-            function: None,
-            script: None,
-            args: None,
-            kwargs: None,
-            method: None,
-            url: None,
-            headers: None,
-            data: None,
-            operation: None,
-            source: None,
-            dest: None,
-            destination: None,
-            target: None,
-            timeout: None,
-            retry_count: None,
-            backoff_strategy: None,
-            depends_on: None,
-        }
-    }
-}

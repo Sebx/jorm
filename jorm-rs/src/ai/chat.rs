@@ -66,13 +66,13 @@ impl ChatInterface {
                         }
                         _ => {
                             if let Err(e) = self.process_user_input(command).await {
-                                println!("❌ Error processing input: {}", e);
+                                println!("❌ Error processing input: {e}");
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    println!("❌ Error reading input: {}", e);
+                    println!("❌ Error reading input: {e}");
                     break;
                 }
             }
@@ -138,7 +138,7 @@ impl ChatInterface {
             .generate_response(input, &context)
             .await?;
 
-        println!("🤖 {}", response);
+        println!("🤖 {response}");
 
         // In a real implementation, we would add the conversation turn to history
         // but since we can't mutate self, we'll just show the response
@@ -193,7 +193,7 @@ impl DAGChatCommands {
                 .generate_response(&analysis_prompt, &context)
                 .await?;
 
-            println!("📊 Analysis: {}", analysis);
+            println!("📊 Analysis: {analysis}");
         } else {
             println!("❌ No DAG loaded. Use 'load <dag_file>' first.");
         }
@@ -203,7 +203,7 @@ impl DAGChatCommands {
 
     /// Generate a new DAG from description
     pub async fn generate_dag(&self, description: &str) -> Result<Dag> {
-        println!("🚀 Generating DAG from: {}", description);
+        println!("🚀 Generating DAG from: {description}");
 
         // Create generation context
         let context = ModelContext {
@@ -214,7 +214,7 @@ impl DAGChatCommands {
         };
 
         // Generate DAG using the model
-        let generation_prompt = format!("Generate a DAG for: {}", description);
+        let generation_prompt = format!("Generate a DAG for: {description}");
         let _response = self
             .model_provider
             .generate_response(&generation_prompt, &context)
@@ -232,7 +232,7 @@ impl DAGChatCommands {
 
     /// Explain an error with context
     pub async fn explain_error(&self, error: &str, context: &str) -> Result<()> {
-        println!("🔍 Explaining error: {}", error);
+        println!("🔍 Explaining error: {error}");
 
         // Create error explanation context
         let model_context = ModelContext {
@@ -243,13 +243,13 @@ impl DAGChatCommands {
         };
 
         // Generate explanation
-        let explanation_prompt = format!("Explain this error: {} Context: {}", error, context);
+        let explanation_prompt = format!("Explain this error: {error} Context: {context}");
         let explanation = self
             .model_provider
             .generate_response(&explanation_prompt, &model_context)
             .await?;
 
-        println!("💡 Explanation: {}", explanation);
+        println!("💡 Explanation: {explanation}");
         Ok(())
     }
 }

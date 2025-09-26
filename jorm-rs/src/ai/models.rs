@@ -177,10 +177,7 @@ impl Phi3Provider {
 
         // Try to create model manager
         let model_config = ModelConfigs::phi3_mini();
-        let model_manager = match ModelManager::new(model_config) {
-            Ok(manager) => Some(manager),
-            Err(_) => None,
-        };
+        let model_manager = ModelManager::new(model_config).ok();
 
         Ok(Self {
             model_info,
@@ -213,10 +210,10 @@ impl LanguageModelProvider for Phi3Provider {
                 } else if prompt_lower.contains("run") || prompt_lower.contains("execute") {
                     "🤖 To run a DAG, use the `run` command:\n\n**Basic execution:**\n• `run my_dag.yaml` - Execute a DAG file\n• `run my_dag.yaml --verbose` - Get detailed output\n• `run my_dag.yaml --dry-run` - Test without execution\n\n**Advanced options:**\n• `run my_dag.yaml --parallel` - Enable parallel execution\n• `run my_dag.yaml --timeout 300` - Set execution timeout\n\n**Before running:**\n• `validate my_dag.yaml` - Check syntax and dependencies\n• `describe my_dag.yaml` - Review the DAG structure\n\nWhat DAG would you like to run?".to_string()
                 } else {
-                    format!("🤖 I understand you're asking about DAGs: \"{}\"\n\nI can help you with DAG workflows and automation! Try asking me:\n• \"Create a data processing pipeline\"\n• \"Help me analyze my workflow\"\n• \"How do I run a DAG?\"", prompt)
+                    format!("🤖 I understand you're asking about DAGs: \"{prompt}\"\n\nI can help you with DAG workflows and automation! Try asking me:\n• \"Create a data processing pipeline\"\n• \"Help me analyze my workflow\"\n• \"How do I run a DAG?\"")
                 }
             } else {
-                format!("🤖 I understand you're asking about: \"{}\"\n\nI'm here to help with DAG workflows and automation! I can:\n\n• **Create DAGs** from your descriptions\n• **Analyze workflows** for optimization\n• **Execute DAGs** with various options\n• **Troubleshoot issues** and provide solutions\n\nTry asking me something like:\n• \"Create a data processing pipeline\"\n• \"Help me analyze my workflow\"\n• \"How do I run a DAG?\"\n\nWhat would you like to accomplish?", prompt)
+                format!("🤖 I understand you're asking about: \"{prompt}\"\n\nI'm here to help with DAG workflows and automation! I can:\n\n• **Create DAGs** from your descriptions\n• **Analyze workflows** for optimization\n• **Execute DAGs** with various options\n• **Troubleshoot issues** and provide solutions\n\nTry asking me something like:\n• \"Create a data processing pipeline\"\n• \"Help me analyze my workflow\"\n• \"How do I run a DAG?\"\n\nWhat would you like to accomplish?")
             };
             Ok(response)
         } else {
@@ -301,7 +298,7 @@ impl LanguageModelProvider for Phi3Provider {
         }
 
         // TODO: Implement actual error explanation
-        Ok(format!("[Phi-3 Error explanation for: {}]", error))
+        Ok(format!("[Phi-3 Error explanation for: {error}]"))
     }
 
     async fn generate_dag_from_description(&self, description: &str) -> Result<GeneratedDAG> {
@@ -370,7 +367,7 @@ impl LanguageModelProvider for GemmaProvider {
         }
 
         // TODO: Implement actual model inference
-        Ok(format!("[Gemma Response to: {}]", prompt))
+        Ok(format!("[Gemma Response to: {prompt}]"))
     }
 
     async fn analyze_dag(&self, _dag_content: &str) -> Result<DAGInsights> {
@@ -411,7 +408,7 @@ impl LanguageModelProvider for GemmaProvider {
         }
 
         // TODO: Implement actual error explanation
-        Ok(format!("[Gemma Error explanation for: {}]", error))
+        Ok(format!("[Gemma Error explanation for: {error}]"))
     }
 
     async fn generate_dag_from_description(&self, description: &str) -> Result<GeneratedDAG> {
@@ -478,7 +475,7 @@ impl LanguageModelProvider for RemoteAPIProvider {
         }
 
         // TODO: Implement actual API calls
-        Ok(format!("[Remote API Response to: {}]", prompt))
+        Ok(format!("[Remote API Response to: {prompt}]"))
     }
 
     async fn analyze_dag(&self, _dag_content: &str) -> Result<DAGInsights> {
@@ -519,7 +516,7 @@ impl LanguageModelProvider for RemoteAPIProvider {
         }
 
         // TODO: Implement actual API calls
-        Ok(format!("[Remote API Error explanation for: {}]", error))
+        Ok(format!("[Remote API Error explanation for: {error}]"))
     }
 
     async fn generate_dag_from_description(&self, description: &str) -> Result<GeneratedDAG> {

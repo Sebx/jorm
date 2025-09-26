@@ -185,7 +185,7 @@ impl InteractiveMode {
                 service
             }
             Err(e) => {
-                println!("⚠️  AI service initialization failed: {}", e);
+                println!("⚠️  AI service initialization failed: {e}");
                 println!("🔄 Falling back to basic mode...");
                 // Create a minimal AI service for fallback
                 return Err(e);
@@ -260,7 +260,7 @@ impl InteractiveMode {
                     }
                 }
                 Err(e) => {
-                    println!("❌ Error reading input: {}", e);
+                    println!("❌ Error reading input: {e}");
                     break;
                 }
             }
@@ -547,8 +547,7 @@ impl InteractiveMode {
             }
             _ => {
                 println!(
-                    "❌ Unknown command: {}. Type 'help' for available commands.",
-                    cmd
+                    "❌ Unknown command: {cmd}. Type 'help' for available commands."
                 );
             }
         }
@@ -561,7 +560,7 @@ impl InteractiveMode {
 
     /// Process natural language query
     async fn process_natural_language(&mut self, query: &str) -> Result<()> {
-        println!("🤔 Processing: {}", query);
+        println!("🤔 Processing: {query}");
 
         // Check if AI service is available
         if !self.ai_service.model_provider.is_available().await {
@@ -600,15 +599,15 @@ impl InteractiveMode {
                 } else {
                     // Try to extract and execute commands from the response
                     if let Some(command) = self.extract_command_from_response(&response) {
-                        println!("🤖 Executing: {}", command);
+                        println!("🤖 Executing: {command}");
                         self.execute_direct_command(&command).await?;
                     } else {
-                        println!("🤖 {}", response);
+                        println!("🤖 {response}");
                     }
                 }
             }
             Err(e) => {
-                println!("❌ Error generating AI response: {}", e);
+                println!("❌ Error generating AI response: {e}");
                 self.show_fallback_response(query);
             }
         }
@@ -672,7 +671,7 @@ impl InteractiveMode {
                 println!("✅ Context cleared");
             }
             _ => {
-                println!("❌ Unknown context: {}. Available: dag, clear", context);
+                println!("❌ Unknown context: {context}. Available: dag, clear");
             }
         }
         Ok(())
@@ -701,8 +700,7 @@ impl InteractiveMode {
             }
             _ => {
                 println!(
-                    "❌ Unknown preference: {}. Available: format, verbose, suggestions",
-                    key
+                    "❌ Unknown preference: {key}. Available: format, verbose, suggestions"
                 );
             }
         }
@@ -725,7 +723,7 @@ impl InteractiveMode {
 
     // Command implementations (delegating to existing functions)
     async fn run_dag(&mut self, file: &str) -> Result<()> {
-        println!("🚀 Running DAG: {}", file);
+        println!("🚀 Running DAG: {file}");
         let dag = parse_dag_file(file).await?;
         self.state.current_dag = Some(dag.clone());
 
@@ -734,13 +732,13 @@ impl InteractiveMode {
 
         match executor.execute_dag(&dag).await {
             Ok(_) => println!("✅ DAG execution completed successfully"),
-            Err(e) => println!("❌ DAG execution failed: {}", e),
+            Err(e) => println!("❌ DAG execution failed: {e}"),
         }
         Ok(())
     }
 
     async fn validate_dag(&self, file: &str) -> Result<()> {
-        println!("🔍 Validating DAG: {}", file);
+        println!("🔍 Validating DAG: {file}");
         let dag = parse_dag_file(file).await?;
         let errors = validate_dag(&dag)?;
 
@@ -749,19 +747,19 @@ impl InteractiveMode {
         } else {
             println!("❌ Invalid DAG. Errors:");
             for error in errors {
-                println!("  - {}", error);
+                println!("  - {error}");
             }
         }
         Ok(())
     }
 
     async fn describe_dag(&self, file: &str) -> Result<()> {
-        println!("📋 Describing DAG: {}", file);
+        println!("📋 Describing DAG: {file}");
         let dag = parse_dag_file(file).await?;
 
         println!("DAG: {}", dag.name);
         if let Some(schedule) = &dag.schedule {
-            println!("Schedule: {}", schedule);
+            println!("Schedule: {schedule}");
         }
 
         let task_names: Vec<String> = dag.tasks.keys().cloned().collect();
@@ -777,7 +775,7 @@ impl InteractiveMode {
     }
 
     async fn analyze_dag(&self, file: &str) -> Result<()> {
-        println!("🔍 Analyzing DAG: {}", file);
+        println!("🔍 Analyzing DAG: {file}");
         let dag = parse_dag_file(file).await?;
         let analysis = self.ai_service.analyze_dag(&dag).await?;
 
@@ -792,7 +790,7 @@ impl InteractiveMode {
     }
 
     async fn generate_dag(&self, description: &str) -> Result<()> {
-        println!("🚀 Generating DAG from: {}", description);
+        println!("🚀 Generating DAG from: {description}");
         let dag = self
             .ai_service
             .generate_dag_from_natural_language(description)
@@ -824,7 +822,7 @@ impl InteractiveMode {
 
         // Convert DAG to Jorm text format and add shebang
         let txt_content = self.dag_to_jorm_txt(&dag)?;
-        let full_content = format!("{}{}", shebang_header, txt_content);
+        let full_content = format!("{shebang_header}{txt_content}");
 
         tokio::fs::write(&filename, full_content).await?;
 
@@ -834,15 +832,14 @@ impl InteractiveMode {
 
         println!("✅ DAG Generated and saved:");
         println!("  Name: {}", dag.name);
-        println!("  File: {}", filename);
+        println!("  File: {filename}");
         println!("  Tasks: {}", dag.tasks.len());
         println!("  Dependencies: {}", dag.dependencies.len());
         println!("  Tags: {}", metadata.tags.join(", "));
         println!("  Requirements: {}", metadata.requirements.join(", "));
-        println!("  📁 File saved to: {}", filename);
+        println!("  📁 File saved to: {filename}");
         println!(
-            "  🚀 Execute with: ./{} or jorm-rs run {}",
-            filename, filename
+            "  🚀 Execute with: ./{filename} or jorm-rs run {filename}"
         );
         Ok(())
     }
@@ -998,67 +995,67 @@ impl InteractiveMode {
         // Add DAG header
         content.push_str(&format!("dag: {}\n", dag.name));
         if let Some(schedule) = &dag.schedule {
-            content.push_str(&format!("schedule: {}\n", schedule));
+            content.push_str(&format!("schedule: {schedule}\n"));
         }
-        content.push_str("\n");
+        content.push('\n');
 
         // Add tasks section
         content.push_str("tasks:\n");
         for (task_name, task) in &dag.tasks {
-            content.push_str(&format!("- {}\n", task_name));
+            content.push_str(&format!("- {task_name}\n"));
 
             // Add task configuration
             if let Some(task_type) = &task.config.task_type {
-                content.push_str(&format!("  type: {}\n", task_type));
+                content.push_str(&format!("  type: {task_type}\n"));
             }
 
             if let Some(description) = &task.description {
-                content.push_str(&format!("  description: {}\n", description));
+                content.push_str(&format!("  description: {description}\n"));
             }
 
             // Add type-specific configuration
             match task.config.task_type.as_deref() {
                 Some("shell") => {
                     if let Some(command) = &task.config.command {
-                        content.push_str(&format!("  command: {}\n", command));
+                        content.push_str(&format!("  command: {command}\n"));
                     }
                 }
                 Some("python") => {
                     if let Some(module) = &task.config.module {
-                        content.push_str(&format!("  module: {}\n", module));
+                        content.push_str(&format!("  module: {module}\n"));
                     }
                     if let Some(function) = &task.config.function {
-                        content.push_str(&format!("  function: {}\n", function));
+                        content.push_str(&format!("  function: {function}\n"));
                     }
                     if let Some(script) = &task.config.data {
                         if let Some(script_str) = script.as_str() {
                             content.push_str("  script: |\n");
                             // Indent each line of the script
                             for line in script_str.lines() {
-                                content.push_str(&format!("    {}\n", line));
+                                content.push_str(&format!("    {line}\n"));
                             }
                         }
                     }
                 }
                 Some("http") => {
                     if let Some(method) = &task.config.method {
-                        content.push_str(&format!("  method: {}\n", method));
+                        content.push_str(&format!("  method: {method}\n"));
                     }
                     if let Some(url) = &task.config.url {
-                        content.push_str(&format!("  url: {}\n", url));
+                        content.push_str(&format!("  url: {url}\n"));
                     }
                 }
                 Some("file") => {
                     if let Some(operation) = &task.config.operation {
-                        content.push_str(&format!("  operation: {}\n", operation));
+                        content.push_str(&format!("  operation: {operation}\n"));
                     }
                     if let Some(dest) = &task.config.dest {
-                        content.push_str(&format!("  destination: {}\n", dest));
+                        content.push_str(&format!("  destination: {dest}\n"));
                     }
                 }
                 _ => {}
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         // Add dependencies section
@@ -1108,7 +1105,7 @@ impl InteractiveMode {
         let mut requirements = Vec::new();
 
         // Check for common dependencies in task configurations
-        for (_, task) in &dag.tasks {
+        for task in dag.tasks.values() {
             if let Some(script) = &task.config.data {
                 if let Some(script_str) = script.as_str() {
                     if script_str.contains("pandas") || script_str.contains("pd.") {
@@ -1147,7 +1144,7 @@ impl InteractiveMode {
 
         // 1. Validate DAG structure
         if let Err(e) = validate_dag(dag) {
-            validation_errors.push(format!("DAG structure validation failed: {}", e));
+            validation_errors.push(format!("DAG structure validation failed: {e}"));
         }
 
         // 2. Validate Python scripts in tasks
@@ -1175,14 +1172,14 @@ impl InteractiveMode {
                 validation_errors.len()
             );
             for error in &validation_errors {
-                println!("  • {}", error);
+                println!("  • {error}");
             }
         }
 
         if !validation_warnings.is_empty() {
             println!("⚠️ Found {} warning(s):", validation_warnings.len());
             for warning in &validation_warnings {
-                println!("  • {}", warning);
+                println!("  • {warning}");
             }
         }
 
@@ -1213,8 +1210,7 @@ impl InteractiveMode {
                 && dag.dependencies.iter().any(|d| d.task == *task_name)
             {
                 warnings.push(format!(
-                    "Task '{}' has no dependencies and is not referenced",
-                    task_name
+                    "Task '{task_name}' has no dependencies and is not referenced"
                 ));
             }
         }
@@ -1246,7 +1242,7 @@ impl InteractiveMode {
         for dep in &dag.dependencies {
             graph
                 .entry(dep.task.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(dep.depends_on.clone());
         }
 
@@ -1255,11 +1251,10 @@ impl InteractiveMode {
         let mut rec_stack = HashSet::new();
 
         for task in dag.tasks.keys() {
-            if !visited.contains(task) {
-                if self.dfs_has_cycle(task, &graph, &mut visited, &mut rec_stack) {
+            if !visited.contains(task)
+                && self.dfs_has_cycle(task, &graph, &mut visited, &mut rec_stack) {
                     return true;
                 }
-            }
         }
 
         false
@@ -1305,8 +1300,7 @@ impl InteractiveMode {
             // Check for common import issues
             if script.contains("import pandas") && !script.contains("import pandas as pd") {
                 warnings.push(format!(
-                    "Task '{}': Consider using 'import pandas as pd' for consistency",
-                    task_name
+                    "Task '{task_name}': Consider using 'import pandas as pd' for consistency"
                 ));
             }
         }
@@ -1314,42 +1308,37 @@ impl InteractiveMode {
         // Check for potential issues
         if script.contains("password") && script.contains("=") {
             warnings.push(format!(
-                "Task '{}': Hardcoded credentials detected - consider using environment variables",
-                task_name
+                "Task '{task_name}': Hardcoded credentials detected - consider using environment variables"
             ));
         }
 
         if script.contains("connect(") && !script.contains("try:") {
-            warnings.push(format!("Task '{}': Database connection without error handling - consider adding try-except blocks", task_name));
+            warnings.push(format!("Task '{task_name}': Database connection without error handling - consider adding try-except blocks"));
         }
 
         // Check for missing imports
         if script.contains("pd.") && !script.contains("import pandas") {
             errors.push(format!(
-                "Task '{}': Uses pandas but doesn't import it",
-                task_name
+                "Task '{task_name}': Uses pandas but doesn't import it"
             ));
         }
 
         if script.contains("pyodbc.") && !script.contains("import pyodbc") {
             errors.push(format!(
-                "Task '{}': Uses pyodbc but doesn't import it",
-                task_name
+                "Task '{task_name}': Uses pyodbc but doesn't import it"
             ));
         }
 
         if script.contains("requests.") && !script.contains("import requests") {
             errors.push(format!(
-                "Task '{}': Uses requests but doesn't import it",
-                task_name
+                "Task '{task_name}': Uses requests but doesn't import it"
             ));
         }
 
         // Check for common Python issues
         if script.contains("print ") && !script.contains("print(") {
             warnings.push(format!(
-                "Task '{}': Consider using print() function instead of print statement",
-                task_name
+                "Task '{task_name}': Consider using print() function instead of print statement"
             ));
         }
     }
@@ -1360,7 +1349,7 @@ impl InteractiveMode {
         _cron: Option<&str>,
         _name: Option<&str>,
     ) -> Result<()> {
-        println!("📅 Scheduling DAG: {}", file);
+        println!("📅 Scheduling DAG: {file}");
         // Implementation would go here
         println!("✅ DAG scheduled successfully");
         Ok(())
@@ -1388,7 +1377,7 @@ impl InteractiveMode {
     }
 
     async fn trigger_job(&self, job: &str) -> Result<()> {
-        println!("⚡ Triggering job: {}", job);
+        println!("⚡ Triggering job: {job}");
         // Implementation would go here
         println!("✅ Job triggered successfully");
         Ok(())

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tera::Tera;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct SchedulerConfig {
     pub daemon: DaemonConfig,
     pub scheduler: SchedulerSettings,
@@ -31,6 +32,7 @@ pub struct SchedulerSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct TriggerConfig {
     pub webhook: WebhookConfig,
     pub file_watcher: FileWatcherConfig,
@@ -74,17 +76,6 @@ pub enum LogLevel {
     Trace,
 }
 
-impl Default for SchedulerConfig {
-    fn default() -> Self {
-        Self {
-            daemon: DaemonConfig::default(),
-            scheduler: SchedulerSettings::default(),
-            triggers: TriggerConfig::default(),
-            templates: TemplateConfig::default(),
-            environments: HashMap::new(),
-        }
-    }
-}
 
 impl Default for DaemonConfig {
     fn default() -> Self {
@@ -109,14 +100,6 @@ impl Default for SchedulerSettings {
     }
 }
 
-impl Default for TriggerConfig {
-    fn default() -> Self {
-        Self {
-            webhook: WebhookConfig::default(),
-            file_watcher: FileWatcherConfig::default(),
-        }
-    }
-}
 
 impl Default for WebhookConfig {
     fn default() -> Self {
@@ -233,7 +216,7 @@ impl ConfigManager {
 
         // Add environment variables
         for (key, value) in std::env::vars() {
-            context.insert(&format!("env.{}", key), &value);
+            context.insert(format!("env.{key}"), &value);
         }
 
         // Add environment-specific variables
@@ -266,9 +249,9 @@ impl ConfigManager {
 
             // Replace environment variables
             for (key, value) in std::env::vars() {
-                let pattern = format!("${{{}}}", key);
+                let pattern = format!("${{{key}}}");
                 result = result.replace(&pattern, &value);
-                let pattern = format!("${{env.{}}}", key);
+                let pattern = format!("${{env.{key}}}");
                 result = result.replace(&pattern, &value);
             }
 

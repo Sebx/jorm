@@ -29,7 +29,7 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
         } else if line.starts_with("- ") {
             let item = line[2..].trim();
 
-            match current_section.as_deref() {
+            match current_section {
                 Some("tasks") => {
                     // Save previous task if exists
                     if let Some(mut task) = current_task.take() {
@@ -131,9 +131,9 @@ pub fn parse_md(content: &str) -> Result<Dag> {
         } else if line.starts_with("- ") {
             let item = line[2..].trim();
             // Remove markdown formatting (backticks, asterisks)
-            let clean_item = item.replace('`', "").replace('*', "");
+            let clean_item = item.replace(['`', '*'], "");
 
-            match current_section.as_deref() {
+            match current_section {
                 Some("tasks") => {
                     let task = Task::new(clean_item);
                     dag.add_task(task);
@@ -182,7 +182,7 @@ pub fn parse_yaml(content: &str) -> Result<Dag> {
 
                     // Extract dependencies from depends_on field
                     if let Some(depends_on) =
-                        config_map.get(&serde_yaml::Value::String("depends_on".to_string()))
+                        config_map.get(serde_yaml::Value::String("depends_on".to_string()))
                     {
                         match depends_on {
                             serde_yaml::Value::String(dep) => {

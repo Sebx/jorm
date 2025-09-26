@@ -182,7 +182,7 @@ dependencies:
 - task1"#;
 
     let dag_path = tester.create_test_dag(dag_content, "interactive_validation.txt");
-    let input = format!("validate {}\nexit\n", dag_path);
+    let input = format!("validate {dag_path}\nexit\n");
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 
     assert!(
@@ -206,7 +206,7 @@ dependencies:
 - task1"#;
 
     let dag_path = tester.create_test_dag(dag_content, "interactive_execution.txt");
-    let input = format!("run {}\nexit\n", dag_path);
+    let input = format!("run {dag_path}\nexit\n");
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 
     assert!(
@@ -234,7 +234,7 @@ dependencies:
 - task2 after task1"#;
 
     let dag_path = tester.create_test_dag(dag_content, "interactive_description.txt");
-    let input = format!("describe {}\nexit\n", dag_path);
+    let input = format!("describe {dag_path}\nexit\n");
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 
     assert!(
@@ -262,7 +262,7 @@ dependencies:
 - task2 after task1"#;
 
     let dag_path = tester.create_test_dag(dag_content, "interactive_dependencies.txt");
-    let input = format!("run {}\nexit\n", dag_path);
+    let input = format!("run {dag_path}\nexit\n");
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 
     assert!(
@@ -302,7 +302,7 @@ dependencies:
 - task1"#;
 
     let dag_path = tester.create_test_dag(dag_content, "interactive_analyze.txt");
-    let input = format!("analyze {}\nexit\n", dag_path);
+    let input = format!("analyze {dag_path}\nexit\n");
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 
     assert!(
@@ -356,7 +356,7 @@ dependencies:
 - task1"#;
 
     let dag_path = tester.create_test_dag(dag_content, "interactive_schedule.txt");
-    let input = format!("schedule {} every 1 minute\nexit\n", dag_path);
+    let input = format!("schedule {dag_path} every 1 minute\nexit\n");
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 
     assert!(
@@ -575,8 +575,7 @@ dependencies:
 
     let dag_path = tester.create_test_dag(dag_content, "sequence_test.txt");
     let input = format!(
-        "validate {}\nrun {}\ndescribe {}\nexit\n",
-        dag_path, dag_path, dag_path
+        "validate {dag_path}\nrun {dag_path}\ndescribe {dag_path}\nexit\n"
     );
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 
@@ -628,8 +627,7 @@ dependencies:
 
     let dag_path = tester.create_test_dag(dag_content, "complex_workflow.txt");
     let input = format!(
-        "validate {}\nrun {}\ndescribe {}\nexit\n",
-        dag_path, dag_path, dag_path
+        "validate {dag_path}\nrun {dag_path}\ndescribe {dag_path}\nexit\n"
     );
     let (exit_code, stdout, stderr) = tester.run_interactive_command(&input);
 

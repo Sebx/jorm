@@ -15,6 +15,12 @@ pub struct ComprehensiveTestSuite {
     temp_dir: TempDir,
 }
 
+impl Default for ComprehensiveTestSuite {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ComprehensiveTestSuite {
     pub fn new() -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -64,7 +70,7 @@ impl ComprehensiveTestSuite {
 
     /// Create a test DAG file
     pub fn create_dag(&self, name: &str, content: &str) -> String {
-        let dag_path = self.temp_dir.path().join(format!("{}.txt", name));
+        let dag_path = self.temp_dir.path().join(format!("{name}.txt"));
         fs::write(&dag_path, content).expect("Failed to write DAG file");
         dag_path.to_string_lossy().to_string()
     }

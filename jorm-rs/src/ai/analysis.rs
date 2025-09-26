@@ -374,8 +374,7 @@ impl DAGAnalysisEngine {
                 issues.push(PotentialIssue {
                     issue_type: IssueType::ResourceBottleneck,
                     description: format!(
-                        "Task '{}' has many dependencies ({}), which may create bottlenecks",
-                        task, count
+                        "Task '{task}' has many dependencies ({count}), which may create bottlenecks"
                     ),
                     severity: Severity::Warning,
                     affected_tasks: vec![task],

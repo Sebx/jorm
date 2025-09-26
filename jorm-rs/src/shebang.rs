@@ -282,7 +282,7 @@ impl JormDAGHandler {
 
         // Shebang line
         header.push_str("#!/usr/bin/env jorndag\n");
-        header.push_str("\n");
+        header.push('\n');
 
         // JormDAG metadata block
         header.push_str("# JORMDAG:\n");
@@ -290,27 +290,27 @@ impl JormDAGHandler {
         header.push_str(&format!("# version: {}\n", metadata.version));
 
         if let Some(description) = &metadata.description {
-            header.push_str(&format!("# description: {}\n", description));
+            header.push_str(&format!("# description: {description}\n"));
         }
 
         if let Some(author) = &metadata.author {
-            header.push_str(&format!("# author: {}\n", author));
+            header.push_str(&format!("# author: {author}\n"));
         }
 
         if let Some(schedule) = &metadata.schedule {
-            header.push_str(&format!("# schedule: {}\n", schedule));
+            header.push_str(&format!("# schedule: {schedule}\n"));
         }
 
         if let Some(timeout) = metadata.timeout {
-            header.push_str(&format!("# timeout: {}\n", timeout));
+            header.push_str(&format!("# timeout: {timeout}\n"));
         }
 
         if let Some(retries) = metadata.retries {
-            header.push_str(&format!("# retries: {}\n", retries));
+            header.push_str(&format!("# retries: {retries}\n"));
         }
 
         if let Some(environment) = &metadata.environment {
-            header.push_str(&format!("# environment: {}\n", environment));
+            header.push_str(&format!("# environment: {environment}\n"));
         }
 
         if !metadata.tags.is_empty() {
@@ -334,7 +334,7 @@ impl JormDAGHandler {
         header.push_str(&format!("# created_at: {}\n", metadata.created_at));
         header.push_str(&format!("# updated_at: {}\n", metadata.updated_at));
         header.push_str("# END JORMDAG\n");
-        header.push_str("\n");
+        header.push('\n');
 
         header
     }
@@ -345,7 +345,7 @@ impl JormDAGHandler {
 
         // Check if file has jorndag shebang
         if content.starts_with("#!/usr/bin/env jorndag") {
-            println!("🚀 Executing JormDAG: {}", file_path);
+            println!("🚀 Executing JormDAG: {file_path}");
 
             // Parse metadata
             let mut handler = JormDAGHandler::new();
@@ -358,7 +358,7 @@ impl JormDAGHandler {
             self.execute_dag_content(&content, &metadata, args).await?;
         } else {
             // Regular DAG execution
-            println!("🚀 Executing DAG: {}", file_path);
+            println!("🚀 Executing DAG: {file_path}");
             // Use existing DAG execution logic
         }
 
@@ -372,15 +372,15 @@ impl JormDAGHandler {
         println!("  Version: {}", metadata.version);
 
         if let Some(description) = &metadata.description {
-            println!("  Description: {}", description);
+            println!("  Description: {description}");
         }
 
         if let Some(author) = &metadata.author {
-            println!("  Author: {}", author);
+            println!("  Author: {author}");
         }
 
         if let Some(schedule) = &metadata.schedule {
-            println!("  Schedule: {}", schedule);
+            println!("  Schedule: {schedule}");
         }
 
         if !metadata.tags.is_empty() {
@@ -421,20 +421,19 @@ impl JormDAGHandler {
     async fn check_requirements(&self, requirements: &[String]) -> Result<()> {
         for req in requirements {
             let output = Command::new("python")
-                .args(&["-c", &format!("import {}", req)])
+                .args(["-c", &format!("import {req}")])
                 .output();
 
             match output {
                 Ok(output) => {
                     if !output.status.success() {
-                        println!("⚠️ Missing requirement: {}", req);
-                        println!("   Install with: pip install {}", req);
+                        println!("⚠️ Missing requirement: {req}");
+                        println!("   Install with: pip install {req}");
                     }
                 }
                 Err(_) => {
                     println!(
-                        "⚠️ Cannot check requirement: {} (Python not available)",
-                        req
+                        "⚠️ Cannot check requirement: {req} (Python not available)"
                     );
                 }
             }
@@ -529,7 +528,7 @@ impl JormDAGHandler {
                 if metadata
                     .author
                     .as_ref()
-                    .map_or(false, |a| a.contains(author))
+                    .is_some_and(|a| a.contains(author))
                 {
                     return true;
                 }
@@ -543,7 +542,7 @@ impl JormDAGHandler {
                 if metadata
                     .schedule
                     .as_ref()
-                    .map_or(false, |s| s.contains(schedule))
+                    .is_some_and(|s| s.contains(schedule))
                 {
                     return true;
                 }

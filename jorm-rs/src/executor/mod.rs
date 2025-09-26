@@ -88,7 +88,7 @@ impl NativeExecutor {
 
         // Validate that all tasks have registered executors
         if let Err(e) = self.task_registry.validate_dag_tasks(dag) {
-            println!("❌ DAG validation failed: {}", e);
+            println!("❌ DAG validation failed: {e}");
             return Ok(ExecutionResult {
                 dag_id: dag.name.clone(),
                 execution_id,
@@ -103,7 +103,7 @@ impl NativeExecutor {
 
         // Resolve task dependencies and create execution order
         let execution_order = self.resolve_dependencies(dag)?;
-        println!("📋 Execution order: {:?}", execution_order);
+        println!("📋 Execution order: {execution_order:?}");
 
         let mut task_results = HashMap::new();
         let mut failed_tasks = Vec::new();
@@ -121,14 +121,13 @@ impl NativeExecutor {
 
             if should_skip {
                 println!(
-                    "⏭️  Skipping task '{}' due to failed prerequisite",
-                    task_name
+                    "⏭️  Skipping task '{task_name}' due to failed prerequisite"
                 );
                 continue;
             }
 
             if let Some(task) = dag.tasks.get(&task_name) {
-                println!("🔄 Executing task: {}", task_name);
+                println!("🔄 Executing task: {task_name}");
 
                 // Create execution context for this task
                 let context =
@@ -151,12 +150,12 @@ impl NativeExecutor {
                             );
                             failed_tasks.push(task_name.clone());
                         } else {
-                            println!("✅ Task '{}' completed successfully", task_name);
+                            println!("✅ Task '{task_name}' completed successfully");
                             successful_tasks += 1;
                         }
                     }
                     Err(e) => {
-                        println!("❌ Task '{}' failed: {}", task_name, e);
+                        println!("❌ Task '{task_name}' failed: {e}");
                         failed_tasks.push(task_name.clone());
 
                         // Create a failed task result
@@ -167,7 +166,7 @@ impl NativeExecutor {
                             completed_at: chrono::Utc::now(),
                             duration: std::time::Duration::from_secs(0),
                             stdout: String::new(),
-                            stderr: format!("Task execution failed: {}", e),
+                            stderr: format!("Task execution failed: {e}"),
                             exit_code: Some(1),
                             retry_count: 0,
                             output_data: None,
@@ -209,11 +208,10 @@ impl NativeExecutor {
         };
 
         println!(
-            "📊 Execution completed: {}/{} tasks successful",
-            successful_tasks, total_tasks
+            "📊 Execution completed: {successful_tasks}/{total_tasks} tasks successful"
         );
         if !failed_tasks.is_empty() {
-            println!("❌ Failed tasks: {:?}", failed_tasks);
+            println!("❌ Failed tasks: {failed_tasks:?}");
         }
 
         Ok(ExecutionResult {
@@ -404,7 +402,7 @@ impl NativeExecutor {
                 }
             }
             _ => TaskConfig::Shell {
-                command: format!("echo 'Unsupported task type: {}'", task_type),
+                command: format!("echo 'Unsupported task type: {task_type}'"),
                 working_dir: None,
                 shell: None,
             },
@@ -456,7 +454,7 @@ impl TaskRegistry {
 
     /// Register a task executor for a specific task type
     pub fn register_executor(&mut self, task_type: String, executor: Box<dyn TaskExecutor>) {
-        println!("📝 Registering executor for task type: {}", task_type);
+        println!("📝 Registering executor for task type: {task_type}");
         self.executors.insert(task_type, executor);
     }
 

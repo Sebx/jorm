@@ -27,7 +27,7 @@ impl HttpTaskExecutor {
             .timeout(Duration::from_secs(30))
             .build()
             .map_err(|e| ExecutorError::ConfigurationError {
-                message: format!("Failed to create HTTP client: {}", e),
+                message: format!("Failed to create HTTP client: {e}"),
             })?;
 
         Ok(Self {
@@ -40,7 +40,7 @@ impl HttpTaskExecutor {
     pub fn with_timeout(timeout: Duration) -> Result<Self, ExecutorError> {
         let client = Client::builder().timeout(timeout).build().map_err(|e| {
             ExecutorError::ConfigurationError {
-                message: format!("Failed to create HTTP client: {}", e),
+                message: format!("Failed to create HTTP client: {e}"),
             }
         })?;
 
@@ -59,7 +59,7 @@ impl HttpTaskExecutor {
         let client = config_fn(builder)
             .build()
             .map_err(|e| ExecutorError::ConfigurationError {
-                message: format!("Failed to create HTTP client: {}", e),
+                message: format!("Failed to create HTTP client: {e}"),
             })?;
 
         Ok(Self {
@@ -88,7 +88,7 @@ impl HttpTaskExecutor {
         // Parse HTTP method
         let http_method = Method::from_str(method.to_uppercase().as_str()).map_err(|e| {
             ExecutorError::ConfigurationError {
-                message: format!("Invalid HTTP method '{}': {}", method, e),
+                message: format!("Invalid HTTP method '{method}': {e}"),
             }
         })?;
 
@@ -98,7 +98,7 @@ impl HttpTaskExecutor {
         // Add headers
         for (key, value) in headers {
             request_builder = request_builder.header(key, value);
-            println!("📋 Header: {}: {}", key, value);
+            println!("📋 Header: {key}: {value}");
         }
 
         // Add authentication
@@ -121,7 +121,7 @@ impl HttpTaskExecutor {
         let request = request_builder
             .build()
             .map_err(|e| ExecutorError::ConfigurationError {
-                message: format!("Failed to build HTTP request: {}", e),
+                message: format!("Failed to build HTTP request: {e}"),
             })?;
 
         // Execute the request with task timeout
@@ -149,7 +149,7 @@ impl HttpTaskExecutor {
     ) -> Result<RequestBuilder, ExecutorError> {
         match auth {
             AuthConfig::Basic { username, password } => {
-                println!("🔐 Using Basic authentication for user: {}", username);
+                println!("🔐 Using Basic authentication for user: {username}");
                 request_builder = request_builder.basic_auth(username, Some(password));
             }
             AuthConfig::Bearer { token } => {
@@ -157,7 +157,7 @@ impl HttpTaskExecutor {
                 request_builder = request_builder.bearer_auth(token);
             }
             AuthConfig::ApiKey { key, header } => {
-                println!("🔐 Using API key authentication with header: {}", header);
+                println!("🔐 Using API key authentication with header: {header}");
                 request_builder = request_builder.header(header, key);
             }
         }
@@ -189,7 +189,7 @@ impl HttpTaskExecutor {
                 // Log response headers
                 for (name, value) in headers.iter() {
                     if let Ok(value_str) = value.to_str() {
-                        println!("📋 Response header: {}: {}", name, value_str);
+                        println!("📋 Response header: {name}: {value_str}");
                     }
                 }
 
@@ -200,7 +200,7 @@ impl HttpTaskExecutor {
                         .await
                         .map_err(|e| ExecutorError::TaskExecutionFailed {
                             task_id: context.task_id.clone(),
-                            source: anyhow::anyhow!("Failed to read response body: {}", e),
+                            source: anyhow::anyhow!("Failed to read response body: {e}"),
                         })?;
 
                 println!("📤 Response body: {} bytes", response_body.len());
@@ -219,10 +219,7 @@ impl HttpTaskExecutor {
                 let output_data = if response_body.trim().starts_with('{')
                     || response_body.trim().starts_with('[')
                 {
-                    match serde_json::from_str::<serde_json::Value>(&response_body) {
-                        Ok(json) => Some(json),
-                        Err(_) => None,
-                    }
+                    serde_json::from_str::<serde_json::Value>(&response_body).ok()
                 } else {
                     None
                 };
@@ -260,8 +257,7 @@ impl HttpTaskExecutor {
                     output_data,
                     error_message: if status == TaskStatus::Failed {
                         Some(format!(
-                            "HTTP request failed with status code: {}",
-                            status_code
+                            "HTTP request failed with status code: {status_code}"
                         ))
                     } else {
                         None
@@ -270,8 +266,8 @@ impl HttpTaskExecutor {
                 })
             }
             Ok(Err(reqwest_error)) => {
-                let error_msg = format!("HTTP request failed: {}", reqwest_error);
-                println!("❌ {}", error_msg);
+                let error_msg = format!("HTTP request failed: {reqwest_error}");
+                println!("❌ {error_msg}");
 
                 Err(ExecutorError::TaskExecutionFailed {
                     task_id: context.task_id.clone(),
@@ -279,8 +275,8 @@ impl HttpTaskExecutor {
                 })
             }
             Err(_timeout_error) => {
-                let error_msg = format!("HTTP request timed out after {:?}", task_timeout);
-                println!("⏰ {}", error_msg);
+                let error_msg = format!("HTTP request timed out after {task_timeout:?}");
+                println!("⏰ {error_msg}");
 
                 Err(ExecutorError::TaskTimeout {
                     task_id: context.task_id.clone(),
@@ -362,7 +358,7 @@ impl crate::executor::TaskExecutor for HttpTaskExecutor {
                 // Validate method is supported
                 if Method::from_str(method.to_uppercase().as_str()).is_err() {
                     return Err(ExecutorError::ConfigurationError {
-                        message: format!("Unsupported HTTP method: {}", method),
+                        message: format!("Unsupported HTTP method: {method}"),
                     });
                 }
 
@@ -376,7 +372,7 @@ impl crate::executor::TaskExecutor for HttpTaskExecutor {
                 // Basic URL validation
                 if !url.starts_with("http://") && !url.starts_with("https://") {
                     return Err(ExecutorError::ConfigurationError {
-                        message: format!("Invalid URL format: {}", url),
+                        message: format!("Invalid URL format: {url}"),
                     });
                 }
 
@@ -520,7 +516,7 @@ mod tests {
                 {
                     println!("Network not available in test environment, skipping HTTP test");
                 } else {
-                    panic!("Unexpected error in HTTP test: {:?}", e);
+                    panic!("Unexpected error in HTTP test: {e:?}");
                 }
             }
         }
@@ -575,7 +571,7 @@ mod tests {
                 {
                     println!("Network not available in test environment, skipping HTTP POST test");
                 } else {
-                    panic!("Unexpected error in HTTP POST test: {:?}", e);
+                    panic!("Unexpected error in HTTP POST test: {e:?}");
                 }
             }
         }
@@ -629,7 +625,7 @@ mod tests {
                 {
                     println!("Network not available in test environment, skipping HTTP auth test");
                 } else {
-                    panic!("Unexpected error in HTTP auth test: {:?}", e);
+                    panic!("Unexpected error in HTTP auth test: {e:?}");
                 }
             }
         }

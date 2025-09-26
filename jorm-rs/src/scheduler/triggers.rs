@@ -41,7 +41,7 @@ impl FileTrigger {
                 while let Some((event, job_id)) = rx.recv().await {
                     if should_trigger_on_event(&event) {
                         if let Err(e) = scheduler.trigger_job(job_id).await {
-                            eprintln!("Failed to trigger job {}: {}", job_id, e);
+                            eprintln!("Failed to trigger job {job_id}: {e}");
                         }
                     }
                 }
@@ -85,7 +85,7 @@ impl FileTrigger {
                 while let Some((event, job_id)) = rx.recv().await {
                     if should_trigger_on_event(&event) {
                         if let Err(e) = scheduler.trigger_job(job_id).await {
-                            eprintln!("Failed to trigger job {}: {}", job_id, e);
+                            eprintln!("Failed to trigger job {job_id}: {e}");
                         }
                     }
                 }

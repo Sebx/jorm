@@ -59,7 +59,7 @@ impl SchedulerDaemon {
                 if let Some(log_file) = &log_file {
                     // Write to log file
                     let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
-                    let log_line = format!("[{}] {}\n", timestamp, log_message);
+                    let log_line = format!("[{timestamp}] {log_message}\n");
 
                     let write_result = async {
                         use tokio::io::AsyncWriteExt;
@@ -73,11 +73,11 @@ impl SchedulerDaemon {
                     .await;
 
                     if let Err(e) = write_result {
-                        eprintln!("Failed to write to log file: {}", e);
+                        eprintln!("Failed to write to log file: {e}");
                     }
                 } else {
                     // Write to stdout
-                    println!("{}", log_message);
+                    println!("{log_message}");
                 }
             }
         });
@@ -133,13 +133,13 @@ impl SchedulerDaemon {
 
                 // Stop the scheduler
                 if let Err(e) = scheduler_for_signal.stop().await {
-                    eprintln!("Error stopping scheduler: {}", e);
+                    eprintln!("Error stopping scheduler: {e}");
                 }
 
                 // Clean up PID file
                 if let Some(pid_file) = pid_file_for_signal {
                     if let Err(e) = tokio::fs::remove_file(&pid_file).await {
-                        eprintln!("Failed to remove PID file: {}", e);
+                        eprintln!("Failed to remove PID file: {e}");
                     }
                 }
 
@@ -188,10 +188,10 @@ impl SchedulerDaemon {
 fn format_event(event: &SchedulerEvent) -> String {
     match event {
         SchedulerEvent::JobScheduled(job_id) => {
-            format!("Job {} scheduled", job_id)
+            format!("Job {job_id} scheduled")
         }
         SchedulerEvent::JobStarted(job_id) => {
-            format!("Job {} started", job_id)
+            format!("Job {job_id} started")
         }
         SchedulerEvent::JobCompleted(job_id, result) => {
             format!(
@@ -200,10 +200,10 @@ fn format_event(event: &SchedulerEvent) -> String {
             )
         }
         SchedulerEvent::JobFailed(job_id, error) => {
-            format!("Job {} failed: {}", job_id, error)
+            format!("Job {job_id} failed: {error}")
         }
         SchedulerEvent::JobCancelled(job_id) => {
-            format!("Job {} cancelled", job_id)
+            format!("Job {job_id} cancelled")
         }
         SchedulerEvent::SchedulerStarted => "Scheduler started".to_string(),
         SchedulerEvent::SchedulerStopped => "Scheduler stopped".to_string(),
@@ -228,7 +228,7 @@ fn is_process_running(pid: u32) -> bool {
 
     Command::new("tasklist")
         .arg("/FI")
-        .arg(format!("PID eq {}", pid))
+        .arg(format!("PID eq {pid}"))
         .output()
         .map(|output| {
             let stdout = String::from_utf8_lossy(&output.stdout);

@@ -14,7 +14,7 @@ fn main() {
     if !Path::new("target/debug/jorm-rs.exe").exists() {
         println!("❌ jorm-rs binary not found. Building...");
         let build_result = Command::new("cargo")
-            .args(&["build"])
+            .args(["build"])
             .status()
             .expect("Failed to run cargo build");
 
@@ -28,7 +28,7 @@ fn main() {
     // Run all integration tests
     println!("🧪 Running integration tests...");
     let test_result = Command::new("cargo")
-        .args(&["test", "--test", "comprehensive_test_suite"])
+        .args(["test", "--test", "comprehensive_test_suite"])
         .status()
         .expect("Failed to run tests");
 
@@ -42,7 +42,7 @@ fn main() {
     // Run CLI integration tests
     println!("🧪 Running CLI integration tests...");
     let cli_test_result = Command::new("cargo")
-        .args(&["test", "--test", "cli_integration_tests"])
+        .args(["test", "--test", "cli_integration_tests"])
         .status()
         .expect("Failed to run CLI tests");
 
@@ -56,7 +56,7 @@ fn main() {
     // Run interactive integration tests
     println!("🧪 Running interactive integration tests...");
     let interactive_test_result = Command::new("cargo")
-        .args(&["test", "--test", "interactive_integration_tests"])
+        .args(["test", "--test", "interactive_integration_tests"])
         .status()
         .expect("Failed to run interactive tests");
 
@@ -70,7 +70,7 @@ fn main() {
     // Run DAG execution integration tests
     println!("🧪 Running DAG execution integration tests...");
     let dag_test_result = Command::new("cargo")
-        .args(&["test", "--test", "dag_execution_integration_tests"])
+        .args(["test", "--test", "dag_execution_integration_tests"])
         .status()
         .expect("Failed to run DAG execution tests");
 

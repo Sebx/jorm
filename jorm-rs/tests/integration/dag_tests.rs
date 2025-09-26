@@ -327,8 +327,7 @@ dependencies:
         assert_eq!(
             task_result.status,
             TaskStatus::Success,
-            "Task {} failed",
-            task_name
+            "Task {task_name} failed"
         );
     }
 }
@@ -379,8 +378,7 @@ dependencies:
         assert_eq!(
             task_result.status,
             TaskStatus::Success,
-            "Task {} failed",
-            task_name
+            "Task {task_name} failed"
         );
     }
 }

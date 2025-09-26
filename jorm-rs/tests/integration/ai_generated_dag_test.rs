@@ -39,8 +39,7 @@ async fn test_ai_generated_table_copy_dag() {
 
     println!("✅ AI-generated table copy DAG executed successfully!");
     println!(
-        "📊 Copied {} records with 20 fields from table1 to table2",
-        source_count
+        "📊 Copied {source_count} records with 20 fields from table1 to table2"
     );
 }
 
@@ -153,7 +152,7 @@ dependencies:
 /// Execute the DAG using jorm-rs
 async fn execute_dag(dag_path: &std::path::Path) -> DagExecutionResult {
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--bin",
             "jorm-rs",
@@ -169,9 +168,9 @@ async fn execute_dag(dag_path: &std::path::Path) -> DagExecutionResult {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     println!("DAG Execution Output:");
-    println!("STDOUT: {}", stdout);
+    println!("STDOUT: {stdout}");
     if !stderr.is_empty() {
-        println!("STDERR: {}", stderr);
+        println!("STDERR: {stderr}");
     }
 
     DagExecutionResult {

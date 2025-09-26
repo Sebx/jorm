@@ -80,8 +80,7 @@ impl ShellTaskExecutor {
         let shell_args = self.get_shell_args(shell_cmd, command);
 
         println!(
-            "🐚 Executing shell command: {} (shell: {})",
-            command, shell_cmd
+            "🐚 Executing shell command: {command} (shell: {shell_cmd})"
         );
 
         // Create the command
@@ -95,7 +94,7 @@ impl ShellTaskExecutor {
                 .map(|p| p.to_str().unwrap_or("."))
         }) {
             cmd.current_dir(dir);
-            println!("📁 Working directory: {}", dir);
+            println!("📁 Working directory: {dir}");
         }
 
         // Set environment variables from context
@@ -126,7 +125,7 @@ impl ShellTaskExecutor {
                     TaskStatus::Failed
                 };
 
-                println!("✅ Shell command completed with exit code: {:?}", exit_code);
+                println!("✅ Shell command completed with exit code: {exit_code:?}");
                 if !stdout.is_empty() {
                     println!("📤 stdout: {}", stdout.trim());
                 }
@@ -146,7 +145,7 @@ impl ShellTaskExecutor {
                     completed_at,
                     output_data: None,
                     error_message: if status == TaskStatus::Failed {
-                        Some(format!("Command failed with exit code: {:?}", exit_code))
+                        Some(format!("Command failed with exit code: {exit_code:?}"))
                     } else {
                         None
                     },
@@ -154,8 +153,8 @@ impl ShellTaskExecutor {
                 })
             }
             Ok(Err(io_error)) => {
-                let error_msg = format!("Failed to execute shell command: {}", io_error);
-                println!("❌ {}", error_msg);
+                let error_msg = format!("Failed to execute shell command: {io_error}");
+                println!("❌ {error_msg}");
 
                 Err(ExecutorError::TaskExecutionFailed {
                     task_id: context.task_id.clone(),
@@ -163,8 +162,8 @@ impl ShellTaskExecutor {
                 })
             }
             Err(_timeout_error) => {
-                let error_msg = format!("Shell command timed out after {:?}", task_timeout);
-                println!("⏰ {}", error_msg);
+                let error_msg = format!("Shell command timed out after {task_timeout:?}");
+                println!("⏰ {error_msg}");
 
                 Err(ExecutorError::TaskTimeout {
                     task_id: context.task_id.clone(),
@@ -238,7 +237,7 @@ impl crate::executor::TaskExecutor for ShellTaskExecutor {
                 if let Some(dir) = working_dir {
                     if !std::path::Path::new(dir).exists() {
                         return Err(ExecutorError::ConfigurationError {
-                            message: format!("Working directory does not exist: {}", dir),
+                            message: format!("Working directory does not exist: {dir}"),
                         });
                     }
                 }

@@ -63,7 +63,7 @@ pub fn validate_dag(dag: &Dag) -> Result<Vec<String>> {
     // Validate schedule expression
     if let Some(schedule) = &dag.schedule {
         if !is_valid_schedule(schedule) {
-            errors.push(format!("Invalid schedule expression: {}", schedule));
+            errors.push(format!("Invalid schedule expression: {schedule}"));
         }
     }
 
@@ -116,11 +116,10 @@ fn has_cycle(dag: &Dag) -> bool {
     }
 
     for task_name in dag.tasks.keys() {
-        if !visited.contains(task_name) {
-            if dfs(task_name, &graph, &mut visited, &mut rec_stack) {
+        if !visited.contains(task_name)
+            && dfs(task_name, &graph, &mut visited, &mut rec_stack) {
                 return true;
             }
-        }
     }
 
     false

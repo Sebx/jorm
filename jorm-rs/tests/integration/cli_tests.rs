@@ -536,7 +536,7 @@ dependencies:
 
     let dag_path = tester.create_test_dag(dag_content, "interactive_test.txt");
 
-    let input = format!("run {}\nexit\n", dag_path);
+    let input = format!("run {dag_path}\nexit\n");
     let (exit_code, stdout, stderr) = tester.run_command_with_input(&["interactive"], &input);
 
     assert!(
