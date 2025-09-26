@@ -27,33 +27,35 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
         } else if line == "dependencies:" {
             current_section = Some("dependencies");
         } else if line.starts_with("- ") {
-            let item = line[2..].trim();
+            if let Some(stripped) = line.strip_prefix("- ") {
+                let item = stripped.trim();
 
-            match current_section {
-                Some("tasks") => {
-                    // Save previous task if exists
-                    if let Some(mut task) = current_task.take() {
-                        // Assign script to previous task before saving
-                        if !task_script.is_empty() {
-                            // Trim only trailing whitespace to preserve indentation
-                            let script = task_script.trim_end().to_string();
-                            task.config.script = Some(script);
+                match current_section {
+                    Some("tasks") => {
+                        // Save previous task if exists
+                        if let Some(mut task) = current_task.take() {
+                            // Assign script to previous task before saving
+                            if !task_script.is_empty() {
+                                // Trim only trailing whitespace to preserve indentation
+                                let script = task_script.trim_end().to_string();
+                                task.config.script = Some(script);
+                            }
+                            dag.add_task(task);
                         }
-                        dag.add_task(task);
-                    }
 
-                    // Start new task
-                    let task = Task::new(item.to_string());
-                    current_task = Some(task);
-                    in_script = false;
-                    task_script.clear();
-                }
-                Some("dependencies") => {
-                    if let Some((task, depends_on)) = parse_dependency_txt(item) {
-                        dag.add_dependency(task, depends_on);
+                        // Start new task
+                        let task = Task::new(item.to_string());
+                        current_task = Some(task);
+                        in_script = false;
+                        task_script.clear();
                     }
+                    Some("dependencies") => {
+                        if let Some((task, depends_on)) = parse_dependency_txt(item) {
+                            dag.add_dependency(task, depends_on);
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         } else if let Some(ref mut task) = current_task {
             // Parse task configuration
@@ -129,21 +131,23 @@ pub fn parse_md(content: &str) -> Result<Dag> {
         } else if line.to_lowercase().starts_with("## dependencies") {
             current_section = Some("dependencies");
         } else if line.starts_with("- ") {
-            let item = line[2..].trim();
-            // Remove markdown formatting (backticks, asterisks)
-            let clean_item = item.replace(['`', '*'], "");
+            if let Some(stripped) = line.strip_prefix("- ") {
+                let item = stripped.trim();
+                // Remove markdown formatting (backticks, asterisks)
+                let clean_item = item.replace(['`', '*'], "");
 
-            match current_section {
-                Some("tasks") => {
-                    let task = Task::new(clean_item);
-                    dag.add_task(task);
-                }
-                Some("dependencies") => {
-                    if let Some((task, depends_on)) = parse_dependency_md(&clean_item) {
-                        dag.add_dependency(task, depends_on);
+                match current_section {
+                    Some("tasks") => {
+                        let task = Task::new(clean_item);
+                        dag.add_task(task);
                     }
+                    Some("dependencies") => {
+                        if let Some((task, depends_on)) = parse_dependency_md(&clean_item) {
+                            dag.add_dependency(task, depends_on);
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
     }
@@ -249,23 +253,19 @@ fn parse_task_config_yaml(config_map: &serde_yaml::Mapping) -> Result<TaskConfig
                 "function" => config.function = value.as_str().map(|s| s.to_string()),
                 "args" => {
                     if let Ok(json_value) = serde_yaml::to_value(value) {
-                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(
+                        if let Ok(serde_json::Value::Array(arr)) = serde_json::from_str::<serde_json::Value>(
                             &serde_json::to_string(&json_value).unwrap_or_default(),
                         ) {
-                            if let serde_json::Value::Array(arr) = serde_json_value {
-                                config.args = Some(arr);
-                            }
+                            config.args = Some(arr);
                         }
                     }
                 }
                 "kwargs" => {
                     if let Ok(json_value) = serde_yaml::to_value(value) {
-                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(
+                        if let Ok(serde_json::Value::Object(obj)) = serde_json::from_str::<serde_json::Value>(
                             &serde_json::to_string(&json_value).unwrap_or_default(),
                         ) {
-                            if let serde_json::Value::Object(obj) = serde_json_value {
-                                config.kwargs = Some(obj.into_iter().collect());
-                            }
+                            config.kwargs = Some(obj.into_iter().collect());
                         }
                     }
                 }

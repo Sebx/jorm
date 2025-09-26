@@ -643,13 +643,11 @@ impl InteractiveMode {
     /// Extract command from AI response
     fn extract_command_from_response(&self, response: &str) -> Option<String> {
         // Simple pattern matching to extract commands
-        if response.contains("run ") {
-            Some(response.to_string())
-        } else if response.contains("validate ") {
-            Some(response.to_string())
-        } else if response.contains("analyze ") {
-            Some(response.to_string())
-        } else if response.contains("generate ") {
+        if response.contains("run ")
+            || response.contains("validate ")
+            || response.contains("analyze ")
+            || response.contains("generate ")
+        {
             Some(response.to_string())
         } else {
             None
