@@ -355,7 +355,6 @@ mod metrics_tests {
 
         // Verify metrics are collected
         assert!(execution_result.metrics.total_tasks > 0);
-        assert!(execution_result.metrics.successful_tasks >= 0);
-        assert!(execution_result.metrics.failed_tasks >= 0);
+           // Removed absurd comparisons
     }
 }
