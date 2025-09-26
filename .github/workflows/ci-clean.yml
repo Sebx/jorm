@@ -1,4 +1,4 @@
-name: CI
+name: CI Clean
 
 on:
   push:
@@ -24,9 +24,8 @@ jobs:
           toolchain: stable
       - name: cargo fmt
         run: cargo fmt --all -- --check
-      - name: cargo clippy (report only — do not fail on warnings)
-        run: |
-          cargo clippy --all-targets --all-features || true
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
       - name: cargo test
         run: cargo test --all --verbose
 
