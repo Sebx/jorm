@@ -376,11 +376,7 @@ mod tests {
             "Fail Test".to_string(),
             "shell".to_string(),
             TaskConfig::Shell {
-                command: if cfg!(target_os = "windows") {
-                    "exit 1".to_string()
-                } else {
-                    "exit 1".to_string()
-                },
+                command: "exit 1".to_string(),
                 working_dir: None,
                 shell: None,
             },

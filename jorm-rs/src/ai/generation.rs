@@ -636,9 +636,11 @@ if __name__ == "__main__":
         let mut dag = Dag::new(generated.dag_name);
 
         // Add tasks
-        for task in generated.tasks {
-            let mut task_config = TaskConfig::default();
-            task_config.task_type = Some(task.task_type.clone());
+            for task in generated.tasks {
+            let mut task_config = TaskConfig {
+                task_type: Some(task.task_type.clone()),
+                ..Default::default()
+            };
 
             // Set task-specific configuration
             match task.task_type.as_str() {
