@@ -452,7 +452,8 @@ mod tests {
         assert_eq!(metrics.dependency_count, 4);
         assert!(metrics.max_depth > 0);
         assert!(metrics.average_fan_out > 0.0);
-        assert!(metrics.cyclomatic_complexity >= 0);
+    // cyclomatic_complexity is usize so it's always >= 0; assert a more meaningful condition
+    assert!(metrics.cyclomatic_complexity >= 1);
         assert!(metrics.maintainability_index >= 0.0);
     }
 
