@@ -1,6 +1,6 @@
 use super::CronScheduler;
-use anyhow::{Result, Context};
-use notify::{Watcher, RecursiveMode, Event, EventKind};
+use anyhow::{Context, Result};
+use notify::{Event, EventKind, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -23,18 +23,19 @@ impl FileTrigger {
 
     pub async fn watch_file<P: AsRef<Path>>(&mut self, path: P, job_id: Uuid) -> Result<()> {
         let path = path.as_ref().to_path_buf();
-        
+
         if self.watcher.is_none() {
             let (tx, mut rx) = mpsc::unbounded_channel();
             let scheduler = Arc::clone(&self.scheduler);
-            
+
             // Create the file watcher
             let watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
                 if let Ok(event) = res {
                     let _ = tx.send((event, job_id));
                 }
-            }).context("Failed to create file watcher")?;
-            
+            })
+            .context("Failed to create file watcher")?;
+
             // Start the event processing task
             tokio::spawn(async move {
                 while let Some((event, job_id)) = rx.recv().await {
@@ -45,33 +46,40 @@ impl FileTrigger {
                     }
                 }
             });
-            
+
             self.watcher = Some(watcher);
         }
-        
+
         if let Some(watcher) = &mut self.watcher {
-            watcher.watch(&path, RecursiveMode::NonRecursive)
+            watcher
+                .watch(&path, RecursiveMode::NonRecursive)
                 .context("Failed to watch file")?;
             self.watched_paths.push(path);
         }
-        
+
         Ok(())
     }
 
-    pub async fn watch_directory<P: AsRef<Path>>(&mut self, path: P, job_id: Uuid, recursive: bool) -> Result<()> {
+    pub async fn watch_directory<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        job_id: Uuid,
+        recursive: bool,
+    ) -> Result<()> {
         let path = path.as_ref().to_path_buf();
-        
+
         if self.watcher.is_none() {
             let (tx, mut rx) = mpsc::unbounded_channel();
             let scheduler = Arc::clone(&self.scheduler);
-            
+
             // Create the file watcher
             let watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
                 if let Ok(event) = res {
                     let _ = tx.send((event, job_id));
                 }
-            }).context("Failed to create file watcher")?;
-            
+            })
+            .context("Failed to create file watcher")?;
+
             // Start the event processing task
             tokio::spawn(async move {
                 while let Some((event, job_id)) = rx.recv().await {
@@ -82,17 +90,22 @@ impl FileTrigger {
                     }
                 }
             });
-            
+
             self.watcher = Some(watcher);
         }
-        
+
         if let Some(watcher) = &mut self.watcher {
-            let mode = if recursive { RecursiveMode::Recursive } else { RecursiveMode::NonRecursive };
-            watcher.watch(&path, mode)
+            let mode = if recursive {
+                RecursiveMode::Recursive
+            } else {
+                RecursiveMode::NonRecursive
+            };
+            watcher
+                .watch(&path, mode)
                 .context("Failed to watch directory")?;
             self.watched_paths.push(path);
         }
-        
+
         Ok(())
     }
 
@@ -159,13 +172,13 @@ impl ManualTrigger {
 
     pub async fn trigger_job_by_name(&self, job_name: &str) -> Result<bool> {
         let jobs = self.scheduler.list_jobs().await;
-        
+
         for job in jobs {
             if job.name == job_name {
                 return self.scheduler.trigger_job(job.id).await;
             }
         }
-        
+
         Ok(false)
     }
 }
@@ -178,7 +191,7 @@ mod tests {
     async fn test_file_trigger_creation() {
         let scheduler = Arc::new(CronScheduler::new());
         let trigger = FileTrigger::new(scheduler);
-        
+
         assert!(trigger.watcher.is_none());
         assert!(trigger.watched_paths.is_empty());
     }
@@ -187,7 +200,7 @@ mod tests {
     async fn test_webhook_trigger_creation() {
         let scheduler = Arc::new(CronScheduler::new());
         let trigger = WebhookTrigger::new(scheduler, 8080);
-        
+
         assert!(trigger.server_handle.is_none());
         assert_eq!(trigger.port, 8080);
     }
@@ -196,7 +209,7 @@ mod tests {
     async fn test_manual_trigger() {
         let scheduler = Arc::new(CronScheduler::new());
         let trigger = ManualTrigger::new(scheduler.clone());
-        
+
         // Add a test job
         let job = crate::scheduler::ScheduledJob::new(
             "test_job".to_string(),
@@ -204,15 +217,15 @@ mod tests {
             crate::scheduler::Schedule::Manual,
         );
         let job_id = scheduler.add_job(job).await.unwrap();
-        
+
         // Test triggering by ID
         let result = trigger.trigger_job(job_id).await.unwrap();
         assert!(result);
-        
+
         // Test triggering by name
         let result = trigger.trigger_job_by_name("test_job").await.unwrap();
         assert!(result);
-        
+
         // Test triggering non-existent job
         let result = trigger.trigger_job_by_name("non_existent").await.unwrap();
         assert!(!result);

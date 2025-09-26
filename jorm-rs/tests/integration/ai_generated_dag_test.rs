@@ -1,5 +1,5 @@
-use std::process::Command;
 use std::fs;
+use std::process::Command;
 use tempfile::TempDir;
 
 /// Integration test for AI-generated DAG that copies a table with 20 fields and 1000 records
@@ -7,42 +7,48 @@ use tempfile::TempDir;
 async fn test_ai_generated_table_copy_dag() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let temp_path = temp_dir.path();
-    
+
     // Create test CSV file with 20 fields and 1000 records
     let csv_path = temp_path.join("table1.csv");
     create_test_csv(&csv_path).await;
-    
+
     // Generate DAG using AI prompt
     let dag_content = generate_simple_table_copy_dag(&csv_path);
-    
+
     // Write DAG to temporary file
     let dag_path = temp_path.join("table_copy_dag.txt");
     fs::write(&dag_path, &dag_content).expect("Failed to write DAG file");
-    
+
     // Execute the AI-generated DAG
     let result = execute_dag(&dag_path).await;
-    
+
     // Verify the DAG executed successfully
-    assert!(result.success, "AI-generated DAG should execute successfully");
-    
+    assert!(
+        result.success,
+        "AI-generated DAG should execute successfully"
+    );
+
     // Verify table2 was created
     let target_file = std::path::Path::new("table2.csv");
     assert!(target_file.exists(), "table2.csv should exist");
-    
+
     // Verify record count
     let source_count = get_csv_record_count(&csv_path).await;
     let target_count = get_csv_record_count(&std::path::PathBuf::from("table2.csv")).await;
     assert_eq!(source_count, target_count, "Record counts should match");
-    
+
     println!("✅ AI-generated table copy DAG executed successfully!");
-    println!("📊 Copied {} records with 20 fields from table1 to table2", source_count);
+    println!(
+        "📊 Copied {} records with 20 fields from table1 to table2",
+        source_count
+    );
 }
 
 /// Create test CSV file with 20 fields and 1000 records
 async fn create_test_csv(csv_path: &std::path::Path) {
     let mut csv_content = String::new();
     csv_content.push_str("id,field1,field2,field3,field4,field5,field6,field7,field8,field9,field10,field11,field12,field13,field14,field15,field16,field17,field18,field19,field20\n");
-    
+
     // Generate 1000 records with 20 fields each
     for i in 1..=1000 {
         csv_content.push_str(&format!(
@@ -50,7 +56,7 @@ async fn create_test_csv(csv_path: &std::path::Path) {
             i, i, i, i as f64 * 1.5, i, i * 2, i as f64 * 2.5, i, i * 3, i as f64 * 3.5, i, i * 4, i as f64 * 4.5, i, i * 5, i as f64 * 5.5, i, i * 6, i as f64 * 6.5, i, i * 7
         ));
     }
-    
+
     // Write CSV file
     std::fs::write(csv_path, csv_content).expect("Failed to create test CSV file");
 }
@@ -60,8 +66,9 @@ fn generate_simple_table_copy_dag(csv_path: &std::path::Path) -> String {
     // This simulates an AI-generated DAG based on the prompt:
     // "Create a DAG that copies table1 with 20 fields and 1000 records to table2"
     // Using a minimal text format that won't be confused with YAML
-    
-    format!(r#"AI-Generated Table Copy DAG
+
+    format!(
+        r#"AI-Generated Table Copy DAG
 
 This DAG was generated from the prompt: "Create a DAG that copies table1 with 20 fields and 1000 records to table2"
 
@@ -137,7 +144,7 @@ tasks:
 
 dependencies:
 - verify_copy_step2 after copy_table_step1
-"#, 
+"#,
         csv_path.display(),
         csv_path.display()
     )
@@ -146,20 +153,27 @@ dependencies:
 /// Execute the DAG using jorm-rs
 async fn execute_dag(dag_path: &std::path::Path) -> DagExecutionResult {
     let output = Command::new("cargo")
-        .args(&["run", "--bin", "jorm-rs", "--", "run", dag_path.to_str().unwrap()])
+        .args(&[
+            "run",
+            "--bin",
+            "jorm-rs",
+            "--",
+            "run",
+            dag_path.to_str().unwrap(),
+        ])
         .current_dir(".")
         .output()
         .expect("Failed to execute DAG");
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    
+
     println!("DAG Execution Output:");
     println!("STDOUT: {}", stdout);
     if !stderr.is_empty() {
         println!("STDERR: {}", stderr);
     }
-    
+
     DagExecutionResult {
         success: output.status.success(),
         stdout: stdout.to_string(),
@@ -189,38 +203,40 @@ struct DagExecutionResult {
 async fn test_ai_generated_table_analysis() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let temp_path = temp_dir.path();
-    
+
     // Create test CSV with specific characteristics
     let csv_path = temp_path.join("sample_data.csv");
     create_sample_data_csv(&csv_path).await;
-    
+
     // Generate analysis DAG
     let dag_content = generate_analysis_dag(&csv_path);
     let dag_path = temp_path.join("analysis_dag.txt");
     fs::write(&dag_path, &dag_content).expect("Failed to write DAG file");
-    
+
     // Execute analysis
     let result = execute_dag(&dag_path).await;
     assert!(result.success, "Analysis DAG should execute successfully");
-    
+
     // Verify analysis output was created
     let analysis_file = std::path::Path::new("data_analysis.json");
     assert!(analysis_file.exists(), "Analysis output should exist");
-    
+
     println!("✅ AI-generated data analysis DAG executed successfully!");
 }
 
 /// Create sample data CSV for analysis
 async fn create_sample_data_csv(csv_path: &std::path::Path) {
     let mut csv_content = String::new();
-    csv_content.push_str("id,customer_name,product,quantity,price,date,category,region,sales_rep,status\n");
-    
+    csv_content.push_str(
+        "id,customer_name,product,quantity,price,date,category,region,sales_rep,status\n",
+    );
+
     let products = ["Laptop", "Mouse", "Keyboard", "Monitor", "Headphones"];
     let categories = ["Electronics", "Accessories", "Hardware"];
     let regions = ["North", "South", "East", "West"];
     let reps = ["Alice", "Bob", "Charlie", "Diana"];
     let statuses = ["Completed", "Pending", "Cancelled"];
-    
+
     // Generate 100 sample records
     for i in 1..=100 {
         let product = products[i % products.len()];
@@ -230,19 +246,29 @@ async fn create_sample_data_csv(csv_path: &std::path::Path) {
         let status = statuses[i % statuses.len()];
         let quantity = (i % 10) + 1;
         let price = (i as f64) * 1.5 + 10.0;
-        
+
         csv_content.push_str(&format!(
             "{},Customer_{},{},{},{:.2},2024-01-{:02},{},{},{},{}\n",
-            i, i, product, quantity, price, (i % 28) + 1, category, region, rep, status
+            i,
+            i,
+            product,
+            quantity,
+            price,
+            (i % 28) + 1,
+            category,
+            region,
+            rep,
+            status
         ));
     }
-    
+
     std::fs::write(csv_path, csv_content).expect("Failed to create sample CSV file");
 }
 
 /// Generate analysis DAG
 fn generate_analysis_dag(csv_path: &std::path::Path) -> String {
-    format!(r#"AI-Generated Data Analysis DAG
+    format!(
+        r#"AI-Generated Data Analysis DAG
 
 This DAG performs comprehensive analysis on sample sales data
 
@@ -297,7 +323,7 @@ tasks:
     print(f"   Average Sale: ${{analysis['average_sale']:.2f}}")
     print(f"   Top Category: {{analysis['top_category']}}")
     print(f"   Top Region: {{analysis['top_region']}}")
-"#, 
+"#,
         csv_path.display()
     )
 }

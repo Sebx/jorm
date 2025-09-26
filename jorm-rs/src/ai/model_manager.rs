@@ -1,10 +1,10 @@
 //! Simplified model manager for on-demand LLM loading and caching
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 
 /// Model loading configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,8 +64,7 @@ impl ModelManager {
     /// Create a new model manager
     pub fn new(config: ModelConfig) -> Result<Self> {
         let cache_dir = config.cache_dir.clone();
-        std::fs::create_dir_all(&cache_dir)
-            .context("Failed to create cache directory")?;
+        std::fs::create_dir_all(&cache_dir).context("Failed to create cache directory")?;
 
         Ok(Self {
             config,
@@ -106,7 +105,7 @@ impl ModelManager {
         if let Ok(cached_model) = self.load_from_cache().await {
             let mut cache = self.cache.write().await;
             *cache = Some(cached_model);
-            
+
             let mut status = self.status.write().await;
             *status = ModelStatus::Loaded;
             println!("✅ Model loaded from cache");
@@ -125,16 +124,20 @@ impl ModelManager {
                 version: "1.0".to_string(),
                 size_bytes: self.config.max_size_mb * 1024 * 1024,
                 download_date: chrono::Utc::now(),
-                model_type: if self.config.use_onnx { "onnx".to_string() } else { "candle".to_string() },
+                model_type: if self.config.use_onnx {
+                    "onnx".to_string()
+                } else {
+                    "candle".to_string()
+                },
             },
         };
 
         // Save to cache
         self.save_to_cache(&model_cache).await?;
-        
+
         let mut cache = self.cache.write().await;
         *cache = Some(model_cache);
-        
+
         let mut status = self.status.write().await;
         *status = ModelStatus::Loaded;
         println!("✅ Model loaded successfully");
@@ -145,7 +148,8 @@ impl ModelManager {
     /// Get model cache (must be loaded)
     pub async fn get_model_cache(&self) -> Result<Arc<SimplifiedModelCache>> {
         let cache = self.cache.read().await;
-        cache.as_ref()
+        cache
+            .as_ref()
             .map(|c| Arc::new(c.clone()))
             .ok_or_else(|| anyhow::anyhow!("Model not loaded"))
     }
@@ -157,9 +161,8 @@ impl ModelManager {
             return Err(anyhow::anyhow!("No cached model found"));
         }
 
-        let metadata: ModelMetadata = serde_json::from_str(
-            &tokio::fs::read_to_string(&metadata_path).await?
-        )?;
+        let metadata: ModelMetadata =
+            serde_json::from_str(&tokio::fs::read_to_string(&metadata_path).await?)?;
 
         let model_path = self.config.cache_dir.join(&self.config.filename);
         if !model_path.exists() {
@@ -179,14 +182,19 @@ impl ModelManager {
 
         // Create a mock model file
         let model_path = self.config.cache_dir.join(&self.config.filename);
-        tokio::fs::write(&model_path, format!("Mock model file for {}", self.config.repo)).await?;
+        tokio::fs::write(
+            &model_path,
+            format!("Mock model file for {}", self.config.repo),
+        )
+        .await?;
 
         // Save metadata
         let metadata_path = self.config.cache_dir.join("metadata.json");
         tokio::fs::write(
             &metadata_path,
-            serde_json::to_string_pretty(&model_cache.metadata)?
-        ).await?;
+            serde_json::to_string_pretty(&model_cache.metadata)?,
+        )
+        .await?;
 
         Ok(())
     }
@@ -232,9 +240,7 @@ impl ModelConfigs {
             repo: "microsoft/Phi-3-mini-4k-instruct".to_string(),
             filename: "model.onnx".to_string(),
             max_size_mb: 500,
-            cache_dir: std::env::temp_dir()
-                .join("jorm-rs")
-                .join("phi3-mini"),
+            cache_dir: std::env::temp_dir().join("jorm-rs").join("phi3-mini"),
             use_onnx: true,
         }
     }
@@ -245,9 +251,7 @@ impl ModelConfigs {
             repo: "google/gemma-2b-it".to_string(),
             filename: "model.onnx".to_string(),
             max_size_mb: 500,
-            cache_dir: std::env::temp_dir()
-                .join("jorm-rs")
-                .join("gemma-2b"),
+            cache_dir: std::env::temp_dir().join("jorm-rs").join("gemma-2b"),
             use_onnx: true,
         }
     }
@@ -286,7 +290,7 @@ mod tests {
         };
 
         let manager = ModelManager::new(config).unwrap();
-        
+
         // Test loading
         manager.load_model().await.unwrap();
         assert!(manager.is_available().await);

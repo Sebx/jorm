@@ -1,4 +1,4 @@
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -162,17 +162,14 @@ impl ConfigManager {
     }
 
     pub fn load_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
-        let content = std::fs::read_to_string(&path)
-            .context("Failed to read config file")?;
-        
+        let content = std::fs::read_to_string(&path).context("Failed to read config file")?;
+
         let config: SchedulerConfig = match path.as_ref().extension().and_then(|s| s.to_str()) {
             Some("yaml") | Some("yml") => {
-                serde_yaml::from_str(&content)
-                    .context("Failed to parse YAML config")?
+                serde_yaml::from_str(&content).context("Failed to parse YAML config")?
             }
             Some("json") => {
-                serde_json::from_str(&content)
-                    .context("Failed to parse JSON config")?
+                serde_json::from_str(&content).context("Failed to parse JSON config")?
             }
             Some("toml") => {
                 // TOML parsing would go here if needed
@@ -182,11 +179,9 @@ impl ConfigManager {
             _ => {
                 // Try to detect format from content
                 if content.trim_start().starts_with('{') {
-                    serde_json::from_str(&content)
-                        .context("Failed to parse JSON config")?
+                    serde_json::from_str(&content).context("Failed to parse JSON config")?
                 } else {
-                    serde_yaml::from_str(&content)
-                        .context("Failed to parse YAML config")?
+                    serde_yaml::from_str(&content).context("Failed to parse YAML config")?
                 }
             }
         };
@@ -225,7 +220,8 @@ impl ConfigManager {
         if let Some(tera) = &self.template_engine {
             // Create a temporary Tera instance for rendering
             let mut temp_tera = tera.clone();
-            temp_tera.render_str(template, context)
+            temp_tera
+                .render_str(template, context)
                 .context("Failed to render template string")
         } else {
             anyhow::bail!("Template engine not initialized")
@@ -234,12 +230,12 @@ impl ConfigManager {
 
     pub fn substitute_variables(&self, text: &str, environment: Option<&str>) -> Result<String> {
         let mut context = tera::Context::new();
-        
+
         // Add environment variables
         for (key, value) in std::env::vars() {
             context.insert(&format!("env.{}", key), &value);
         }
-        
+
         // Add environment-specific variables
         if let Some(env_name) = environment {
             if let Some(env_config) = self.get_environment(env_name) {
@@ -248,20 +244,26 @@ impl ConfigManager {
                 }
             }
         }
-        
+
         // Add current timestamp
-        context.insert("now", &chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string());
+        context.insert(
+            "now",
+            &chrono::Utc::now()
+                .format("%Y-%m-%d %H:%M:%S UTC")
+                .to_string(),
+        );
         context.insert("timestamp", &chrono::Utc::now().timestamp());
-        
+
         if let Some(tera) = &self.template_engine {
             // Create a temporary Tera instance for rendering
             let mut temp_tera = tera.clone();
-            temp_tera.render_str(text, &context)
+            temp_tera
+                .render_str(text, &context)
                 .context("Failed to substitute variables")
         } else {
             // Simple variable substitution without template engine
             let mut result = text.to_string();
-            
+
             // Replace environment variables
             for (key, value) in std::env::vars() {
                 let pattern = format!("${{{}}}", key);
@@ -269,7 +271,7 @@ impl ConfigManager {
                 let pattern = format!("${{env.{}}}", key);
                 result = result.replace(&pattern, &value);
             }
-            
+
             Ok(result)
         }
     }
@@ -277,11 +279,9 @@ impl ConfigManager {
     fn init_template_engine(&mut self) -> Result<()> {
         let mut tera = if let Some(template_dir) = &self.config.templates.template_dir {
             let pattern = template_dir.join("**/*").to_string_lossy().to_string();
-            Tera::new(&pattern)
-                .context("Failed to initialize template engine with directory")?
+            Tera::new(&pattern).context("Failed to initialize template engine with directory")?
         } else {
-            Tera::new("")
-                .context("Failed to initialize template engine")?
+            Tera::new("").context("Failed to initialize template engine")?
         };
 
         // Add custom filters and functions
@@ -310,15 +310,17 @@ fn env_filter(value: &tera::Value, _: &HashMap<String, tera::Value>) -> tera::Re
 }
 
 fn now_function(_: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
-    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+    let now = chrono::Utc::now()
+        .format("%Y-%m-%d %H:%M:%S UTC")
+        .to_string();
     Ok(tera::Value::String(now))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_default_config() {
@@ -331,16 +333,22 @@ mod tests {
     #[test]
     fn test_config_serialization() {
         let config = SchedulerConfig::default();
-        
+
         // Test YAML serialization
         let yaml = serde_yaml::to_string(&config).unwrap();
         let deserialized: SchedulerConfig = serde_yaml::from_str(&yaml).unwrap();
-        assert_eq!(config.scheduler.check_interval_seconds, deserialized.scheduler.check_interval_seconds);
-        
+        assert_eq!(
+            config.scheduler.check_interval_seconds,
+            deserialized.scheduler.check_interval_seconds
+        );
+
         // Test JSON serialization
         let json = serde_json::to_string(&config).unwrap();
         let deserialized: SchedulerConfig = serde_json::from_str(&json).unwrap();
-        assert_eq!(config.scheduler.check_interval_seconds, deserialized.scheduler.check_interval_seconds);
+        assert_eq!(
+            config.scheduler.check_interval_seconds,
+            deserialized.scheduler.check_interval_seconds
+        );
     }
 
     #[test]
@@ -353,10 +361,12 @@ mod tests {
     fn test_variable_substitution() {
         let manager = ConfigManager::new();
         std::env::set_var("TEST_VAR", "test_value");
-        
-        let result = manager.substitute_variables("Hello ${TEST_VAR}!", None).unwrap();
+
+        let result = manager
+            .substitute_variables("Hello ${TEST_VAR}!", None)
+            .unwrap();
         assert_eq!(result, "Hello test_value!");
-        
+
         std::env::remove_var("TEST_VAR");
     }
 
@@ -371,10 +381,10 @@ scheduler:
   check_interval_seconds: 30
   job_timeout_seconds: 1800
 "#;
-        
+
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(config_content.as_bytes()).unwrap();
-        
+
         let manager = ConfigManager::load_from_file(temp_file.path()).unwrap();
         assert_eq!(manager.config().scheduler.check_interval_seconds, 30);
         assert_eq!(manager.config().scheduler.job_timeout_seconds, 1800);

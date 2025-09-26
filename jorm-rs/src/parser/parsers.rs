@@ -1,5 +1,5 @@
 use super::{Dag, Task, TaskConfig};
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use regex::Regex;
 use serde_yaml;
 use std::collections::HashMap;
@@ -11,13 +11,13 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
     let mut current_task: Option<Task> = None;
     let mut task_script = String::new();
     let mut in_script = false;
-    
+
     for line in content.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        
+
         if line.starts_with("dag:") {
             dag.name = line.split(':').nth(1).unwrap_or("").trim().to_string();
         } else if line.starts_with("schedule:") {
@@ -28,7 +28,7 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
             current_section = Some("dependencies");
         } else if line.starts_with("- ") {
             let item = line[2..].trim();
-            
+
             match current_section.as_deref() {
                 Some("tasks") => {
                     // Save previous task if exists
@@ -41,7 +41,7 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
                         }
                         dag.add_task(task);
                     }
-                    
+
                     // Start new task
                     let task = Task::new(item.to_string());
                     current_task = Some(task);
@@ -86,14 +86,15 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
                 // Preserve the original line including leading whitespace
                 task_script.push_str(line);
                 task_script.push('\n');
-            } else if !line.starts_with("  ") && !line.starts_with("\t") && !line.trim().is_empty() {
+            } else if !line.starts_with("  ") && !line.starts_with("\t") && !line.trim().is_empty()
+            {
                 // If we're not in a script and the line doesn't start with whitespace,
                 // and it's not empty, we're probably starting a new task or section
                 in_script = false;
             }
         }
     }
-    
+
     // Save the last task if exists
     if let Some(mut task) = current_task.take() {
         if !task_script.is_empty() {
@@ -103,7 +104,7 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
         }
         dag.add_task(task);
     }
-    
+
     Ok(dag)
 }
 
@@ -111,13 +112,13 @@ pub fn parse_txt(content: &str) -> Result<Dag> {
 pub fn parse_md(content: &str) -> Result<Dag> {
     let mut dag = Dag::new(String::new());
     let mut current_section = None;
-    
+
     for line in content.lines() {
         let line = line.trim();
         if line.is_empty() {
             continue;
         }
-        
+
         if line.to_lowercase().starts_with("# dag:") {
             dag.name = line.split(':').nth(1).unwrap_or("").trim().to_string();
         } else if line.to_lowercase().starts_with("**schedule:**") {
@@ -131,7 +132,7 @@ pub fn parse_md(content: &str) -> Result<Dag> {
             let item = line[2..].trim();
             // Remove markdown formatting (backticks, asterisks)
             let clean_item = item.replace('`', "").replace('*', "");
-            
+
             match current_section.as_deref() {
                 Some("tasks") => {
                     let task = Task::new(clean_item);
@@ -146,41 +147,43 @@ pub fn parse_md(content: &str) -> Result<Dag> {
             }
         }
     }
-    
+
     Ok(dag)
 }
 
 /// Parse a YAML format DAG
 pub fn parse_yaml(content: &str) -> Result<Dag> {
-    let yaml_data: serde_yaml::Value = serde_yaml::from_str(content)
-        .context("Failed to parse YAML content")?;
-    
+    let yaml_data: serde_yaml::Value =
+        serde_yaml::from_str(content).context("Failed to parse YAML content")?;
+
     let mut dag = Dag::new(String::new());
-    
+
     // Extract DAG name
     if let Some(name) = yaml_data.get("name").and_then(|v| v.as_str()) {
         dag.name = name.to_string();
     } else if let Some(name) = yaml_data.get("dag").and_then(|v| v.as_str()) {
         dag.name = name.to_string();
     }
-    
+
     // Extract schedule
     if let Some(schedule) = yaml_data.get("schedule").and_then(|v| v.as_str()) {
         dag.schedule = Some(schedule.to_string());
     }
-    
+
     // Extract tasks
     if let Some(tasks_data) = yaml_data.get("tasks").and_then(|v| v.as_mapping()) {
         for (task_name, task_config) in tasks_data {
             if let Some(name) = task_name.as_str() {
                 let mut task = Task::new(name.to_string());
-                
+
                 // Parse task configuration
                 if let Some(config_map) = task_config.as_mapping() {
                     task.config = parse_task_config_yaml(config_map)?;
-                    
+
                     // Extract dependencies from depends_on field
-                    if let Some(depends_on) = config_map.get(&serde_yaml::Value::String("depends_on".to_string())) {
+                    if let Some(depends_on) =
+                        config_map.get(&serde_yaml::Value::String("depends_on".to_string()))
+                    {
                         match depends_on {
                             serde_yaml::Value::String(dep) => {
                                 dag.add_dependency(name.to_string(), dep.clone());
@@ -196,12 +199,12 @@ pub fn parse_yaml(content: &str) -> Result<Dag> {
                         }
                     }
                 }
-                
+
                 dag.add_task(task);
             }
         }
     }
-    
+
     // Extract dependencies from root-level dependencies section
     if let Some(dependencies_data) = yaml_data.get("dependencies").and_then(|v| v.as_sequence()) {
         for dep_item in dependencies_data {
@@ -212,7 +215,7 @@ pub fn parse_yaml(content: &str) -> Result<Dag> {
             }
         }
     }
-    
+
     Ok(dag)
 }
 
@@ -236,7 +239,7 @@ fn parse_dependency_md(item: &str) -> Option<(String, String)> {
 
 fn parse_task_config_yaml(config_map: &serde_yaml::Mapping) -> Result<TaskConfig> {
     let mut config = TaskConfig::default();
-    
+
     for (key, value) in config_map {
         if let Some(key_str) = key.as_str() {
             match key_str {
@@ -246,7 +249,9 @@ fn parse_task_config_yaml(config_map: &serde_yaml::Mapping) -> Result<TaskConfig
                 "function" => config.function = value.as_str().map(|s| s.to_string()),
                 "args" => {
                     if let Ok(json_value) = serde_yaml::to_value(value) {
-                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(&serde_json::to_string(&json_value).unwrap_or_default()) {
+                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(
+                            &serde_json::to_string(&json_value).unwrap_or_default(),
+                        ) {
                             if let serde_json::Value::Array(arr) = serde_json_value {
                                 config.args = Some(arr);
                             }
@@ -255,7 +260,9 @@ fn parse_task_config_yaml(config_map: &serde_yaml::Mapping) -> Result<TaskConfig
                 }
                 "kwargs" => {
                     if let Ok(json_value) = serde_yaml::to_value(value) {
-                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(&serde_json::to_string(&json_value).unwrap_or_default()) {
+                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(
+                            &serde_json::to_string(&json_value).unwrap_or_default(),
+                        ) {
                             if let serde_json::Value::Object(obj) = serde_json_value {
                                 config.kwargs = Some(obj.into_iter().collect());
                             }
@@ -277,7 +284,9 @@ fn parse_task_config_yaml(config_map: &serde_yaml::Mapping) -> Result<TaskConfig
                 }
                 "data" => {
                     if let Ok(json_value) = serde_yaml::to_value(value) {
-                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(&serde_json::to_string(&json_value).unwrap_or_default()) {
+                        if let Ok(serde_json_value) = serde_json::from_str::<serde_json::Value>(
+                            &serde_json::to_string(&json_value).unwrap_or_default(),
+                        ) {
                             config.data = Some(serde_json_value);
                         }
                     }
@@ -290,7 +299,9 @@ fn parse_task_config_yaml(config_map: &serde_yaml::Mapping) -> Result<TaskConfig
                 "target" => config.target = value.as_str().map(|s| s.to_string()),
                 "timeout" => config.timeout = value.as_u64(),
                 "retry_count" => config.retry_count = value.as_u64().map(|v| v as u32),
-                "backoff_strategy" => config.backoff_strategy = value.as_str().map(|s| s.to_string()),
+                "backoff_strategy" => {
+                    config.backoff_strategy = value.as_str().map(|s| s.to_string())
+                }
                 "depends_on" => {
                     // This is handled in the main parsing function
                 }
@@ -300,14 +311,14 @@ fn parse_task_config_yaml(config_map: &serde_yaml::Mapping) -> Result<TaskConfig
             }
         }
     }
-    
+
     Ok(config)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_parse_txt() {
         let content = r#"
@@ -323,14 +334,14 @@ dependencies:
   - task2 after task1
   - task3 after task2
 "#;
-        
+
         let dag = parse_txt(content).unwrap();
         assert_eq!(dag.name, "test_dag");
         assert_eq!(dag.schedule, Some("every 10 minutes".to_string()));
         assert_eq!(dag.tasks.len(), 3);
         assert_eq!(dag.dependencies.len(), 2);
     }
-    
+
     #[test]
     fn test_parse_yaml() {
         let content = r#"
@@ -348,12 +359,12 @@ tasks:
     args: [16]
     depends_on: [task1]
 "#;
-        
+
         let dag = parse_yaml(content).unwrap();
         assert_eq!(dag.name, "test_dag");
         assert_eq!(dag.tasks.len(), 2);
         assert_eq!(dag.dependencies.len(), 1);
-        
+
         let task1 = dag.tasks.get("task1").unwrap();
         assert_eq!(task1.config.task_type, Some("shell".to_string()));
         assert_eq!(task1.config.command, Some("echo hello".to_string()));

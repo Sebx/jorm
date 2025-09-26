@@ -1,4 +1,4 @@
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -120,20 +120,29 @@ impl DataFlowManager {
         self.validators.insert(name, validator);
     }
 
-    pub async fn store_output(&mut self, task_id: String, data: OutputData, output_type: OutputType) -> Result<TaskOutput> {
+    pub async fn store_output(
+        &mut self,
+        task_id: String,
+        data: OutputData,
+        output_type: OutputType,
+    ) -> Result<TaskOutput> {
         let execution_id = Uuid::new_v4();
-        
+
         // Validate data size
         let data_size = self.calculate_data_size(&data)?;
         if data_size > self.config.max_output_size_mb * 1024 * 1024 {
-            anyhow::bail!("Output data size ({} MB) exceeds maximum allowed size ({} MB)", 
-                data_size / (1024 * 1024), self.config.max_output_size_mb);
+            anyhow::bail!(
+                "Output data size ({} MB) exceeds maximum allowed size ({} MB)",
+                data_size / (1024 * 1024),
+                self.config.max_output_size_mb
+            );
         }
 
         // Validate data if validator exists
         if let OutputType::Structured(schema_name) = &output_type {
             if let Some(validator) = self.validators.get(schema_name) {
-                validator.validate(&data)
+                validator
+                    .validate(&data)
                     .context("Output validation failed")?;
             }
         }
@@ -144,12 +153,8 @@ impl DataFlowManager {
             StorageBackend::File { base_path } => {
                 self.store_to_file(base_path, &execution_id, data).await?
             }
-            StorageBackend::Database { .. } => {
-                self.store_to_database(&execution_id, data).await?
-            }
-            StorageBackend::S3 { .. } => {
-                self.store_to_s3(&execution_id, data).await?
-            }
+            StorageBackend::Database { .. } => self.store_to_database(&execution_id, data).await?,
+            StorageBackend::S3 { .. } => self.store_to_s3(&execution_id, data).await?,
         };
 
         let output = TaskOutput {
@@ -179,9 +184,7 @@ impl DataFlowManager {
                 StorageBackend::Database { .. } => {
                     self.load_from_database(&output.execution_id).await
                 }
-                StorageBackend::S3 { .. } => {
-                    self.load_from_s3(&output.execution_id).await
-                }
+                StorageBackend::S3 { .. } => self.load_from_s3(&output.execution_id).await,
             }
         } else {
             Ok(None)
@@ -193,10 +196,12 @@ impl DataFlowManager {
     }
 
     pub async fn cleanup_old_outputs(&mut self) -> Result<usize> {
-        let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(self.config.cleanup_after_hours as i64);
+        let cutoff_time =
+            chrono::Utc::now() - chrono::Duration::hours(self.config.cleanup_after_hours as i64);
         let mut removed_count = 0;
 
-        let old_outputs: Vec<String> = self.outputs
+        let old_outputs: Vec<String> = self
+            .outputs
             .iter()
             .filter(|(_, output)| output.created_at < cutoff_time)
             .map(|(task_id, _)| task_id.clone())
@@ -207,7 +212,8 @@ impl DataFlowManager {
                 // Clean up storage if needed
                 match &self.config.storage_backend {
                     StorageBackend::File { base_path } => {
-                        self.delete_from_file(base_path, &output.execution_id).await?;
+                        self.delete_from_file(base_path, &output.execution_id)
+                            .await?;
                     }
                     StorageBackend::Database { .. } => {
                         self.delete_from_database(&output.execution_id).await?;
@@ -228,7 +234,7 @@ impl DataFlowManager {
 
     pub fn substitute_output_references(&self, text: &str) -> String {
         let mut result = text.to_string();
-        
+
         // Replace ${task_name.output} patterns
         for (task_id, output) in &self.outputs {
             let pattern = format!("${{{}.output}}", task_id);
@@ -236,7 +242,7 @@ impl DataFlowManager {
                 result = result.replace(&pattern, &output_str);
             }
         }
-        
+
         result
     }
 
@@ -248,11 +254,9 @@ impl DataFlowManager {
                 Ok(serialized.len())
             }
             OutputData::Binary(bytes) => Ok(bytes.len()),
-            OutputData::File(path) => {
-                std::fs::metadata(path)
-                    .map(|m| m.len() as usize)
-                    .context("Failed to get file size")
-            }
+            OutputData::File(path) => std::fs::metadata(path)
+                .map(|m| m.len() as usize)
+                .context("Failed to get file size"),
             OutputData::Reference(_) => Ok(0), // References don't count toward size limit
         }
     }
@@ -260,59 +264,79 @@ impl DataFlowManager {
     fn output_to_string(&self, data: &OutputData) -> Result<String> {
         match data {
             OutputData::Text(text) => Ok(text.clone()),
-            OutputData::Json(value) => serde_json::to_string(value).context("Failed to serialize JSON"),
+            OutputData::Json(value) => {
+                serde_json::to_string(value).context("Failed to serialize JSON")
+            }
             OutputData::File(path) => Ok(path.to_string_lossy().to_string()),
             OutputData::Binary(_) => Ok("[Binary Data]".to_string()),
             OutputData::Reference(ref_str) => Ok(ref_str.clone()),
         }
     }
 
-    async fn store_to_file(&self, base_path: &PathBuf, execution_id: &Uuid, data: OutputData) -> Result<OutputData> {
+    async fn store_to_file(
+        &self,
+        base_path: &PathBuf,
+        execution_id: &Uuid,
+        data: OutputData,
+    ) -> Result<OutputData> {
         let file_path = base_path.join(format!("{}.json", execution_id));
-        
+
         // Ensure directory exists
         if let Some(parent) = file_path.parent() {
-            tokio::fs::create_dir_all(parent).await
+            tokio::fs::create_dir_all(parent)
+                .await
                 .context("Failed to create storage directory")?;
         }
-        
-        let serialized = serde_json::to_string(&data)
-            .context("Failed to serialize output data")?;
-        
-        tokio::fs::write(&file_path, serialized).await
+
+        let serialized = serde_json::to_string(&data).context("Failed to serialize output data")?;
+
+        tokio::fs::write(&file_path, serialized)
+            .await
             .context("Failed to write output to file")?;
-        
-        Ok(OutputData::Reference(file_path.to_string_lossy().to_string()))
+
+        Ok(OutputData::Reference(
+            file_path.to_string_lossy().to_string(),
+        ))
     }
 
-    async fn load_from_file(&self, base_path: &PathBuf, execution_id: &Uuid) -> Result<Option<OutputData>> {
+    async fn load_from_file(
+        &self,
+        base_path: &PathBuf,
+        execution_id: &Uuid,
+    ) -> Result<Option<OutputData>> {
         let file_path = base_path.join(format!("{}.json", execution_id));
-        
+
         if !file_path.exists() {
             return Ok(None);
         }
-        
-        let content = tokio::fs::read_to_string(&file_path).await
+
+        let content = tokio::fs::read_to_string(&file_path)
+            .await
             .context("Failed to read output file")?;
-        
-        let data: OutputData = serde_json::from_str(&content)
-            .context("Failed to deserialize output data")?;
-        
+
+        let data: OutputData =
+            serde_json::from_str(&content).context("Failed to deserialize output data")?;
+
         Ok(Some(data))
     }
 
     async fn delete_from_file(&self, base_path: &PathBuf, execution_id: &Uuid) -> Result<()> {
         let file_path = base_path.join(format!("{}.json", execution_id));
-        
+
         if file_path.exists() {
-            tokio::fs::remove_file(&file_path).await
+            tokio::fs::remove_file(&file_path)
+                .await
                 .context("Failed to delete output file")?;
         }
-        
+
         Ok(())
     }
 
-    async fn store_to_database(&self, _execution_id: &Uuid, data: OutputData) -> Result<OutputData> {
+    async fn store_to_database(
+        &self,
+        _execution_id: &Uuid,
+        data: OutputData,
+    ) -> Result<OutputData> {
         // TODO: Implement database storage
         Ok(data)
     }
@@ -352,7 +376,7 @@ mod tests {
     async fn test_dataflow_manager_creation() {
         let config = DataFlowConfig::default();
         let manager = DataFlowManager::new(config);
-        
+
         assert_eq!(manager.outputs.len(), 0);
     }
 
@@ -360,12 +384,15 @@ mod tests {
     async fn test_store_and_retrieve_output() {
         let config = DataFlowConfig::default();
         let mut manager = DataFlowManager::new(config);
-        
+
         let data = OutputData::Text("Hello, World!".to_string());
-        let output = manager.store_output("test_task".to_string(), data, OutputType::Text).await.unwrap();
-        
+        let output = manager
+            .store_output("test_task".to_string(), data, OutputType::Text)
+            .await
+            .unwrap();
+
         assert_eq!(output.task_id, "test_task");
-        
+
         let retrieved = manager.get_output("test_task").unwrap();
         assert_eq!(retrieved.task_id, "test_task");
     }
@@ -374,14 +401,19 @@ mod tests {
     async fn test_file_storage_backend() {
         let temp_dir = TempDir::new().unwrap();
         let config = DataFlowConfig {
-            storage_backend: StorageBackend::File { base_path: temp_dir.path().to_path_buf() },
+            storage_backend: StorageBackend::File {
+                base_path: temp_dir.path().to_path_buf(),
+            },
             ..Default::default()
         };
         let mut manager = DataFlowManager::new(config);
-        
+
         let data = OutputData::Json(serde_json::json!({"key": "value"}));
-        let output = manager.store_output("test_task".to_string(), data, OutputType::Json).await.unwrap();
-        
+        let output = manager
+            .store_output("test_task".to_string(), data, OutputType::Json)
+            .await
+            .unwrap();
+
         // Data should be stored as reference
         match &output.data {
             OutputData::Reference(_) => {
@@ -389,7 +421,7 @@ mod tests {
             }
             _ => panic!("Expected data to be stored as reference"),
         }
-        
+
         // Should be able to retrieve the data
         let retrieved_data = manager.get_output_data("test_task").await.unwrap().unwrap();
         match retrieved_data {
@@ -407,12 +439,14 @@ mod tests {
             ..Default::default()
         };
         let mut manager = DataFlowManager::new(config);
-        
+
         // Create data larger than 1 MB
         let large_data = "x".repeat(2 * 1024 * 1024); // 2 MB
         let data = OutputData::Text(large_data);
-        
-        let result = manager.store_output("test_task".to_string(), data, OutputType::Text).await;
+
+        let result = manager
+            .store_output("test_task".to_string(), data, OutputType::Text)
+            .await;
         assert!(result.is_err());
     }
 
@@ -420,13 +454,16 @@ mod tests {
     async fn test_output_reference_substitution() {
         let config = DataFlowConfig::default();
         let mut manager = DataFlowManager::new(config);
-        
+
         let data = OutputData::Text("Hello, World!".to_string());
-        manager.store_output("greeting".to_string(), data, OutputType::Text).await.unwrap();
-        
+        manager
+            .store_output("greeting".to_string(), data, OutputType::Text)
+            .await
+            .unwrap();
+
         let template = "The greeting is: ${greeting.output}";
         let result = manager.substitute_output_references(template);
-        
+
         assert_eq!(result, "The greeting is: Hello, World!");
     }
 
@@ -437,15 +474,18 @@ mod tests {
             ..Default::default()
         };
         let mut manager = DataFlowManager::new(config);
-        
+
         let data = OutputData::Text("Test".to_string());
-        manager.store_output("test_task".to_string(), data, OutputType::Text).await.unwrap();
-        
+        manager
+            .store_output("test_task".to_string(), data, OutputType::Text)
+            .await
+            .unwrap();
+
         assert_eq!(manager.outputs.len(), 1);
-        
+
         // Wait a bit to ensure the timestamp is in the past
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        
+
         let removed_count = manager.cleanup_old_outputs().await.unwrap();
         assert_eq!(removed_count, 1);
         assert_eq!(manager.outputs.len(), 0);

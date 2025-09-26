@@ -1,6 +1,6 @@
 //! Natural language to DAG generation
 
-use crate::ai::{GeneratedDAG, GeneratedTask, GeneratedDependency};
+use crate::ai::{GeneratedDAG, GeneratedDependency, GeneratedTask};
 use crate::parser::{Dag, Task, TaskConfig};
 use anyhow::Result;
 use std::collections::HashMap;
@@ -15,37 +15,41 @@ impl NaturalLanguageGenerator {
     pub fn new(model_provider: std::sync::Arc<dyn crate::ai::LanguageModelProvider>) -> Self {
         Self { model_provider }
     }
-    
+
     /// Generate a DAG from natural language description
     pub async fn generate_dag(&self, description: &str) -> Result<Dag> {
         // TODO: Implement actual natural language processing
         // For now, we'll create a simple parser for common patterns
-        
+
         let generated_dag = self.parse_natural_language_description(description).await?;
         self.convert_generated_dag_to_dag(generated_dag)
     }
-    
+
     /// Parse natural language description into structured format
     async fn parse_natural_language_description(&self, description: &str) -> Result<GeneratedDAG> {
         // Simple pattern matching for common DAG descriptions
         let description_lower = description.to_lowercase();
-        
+
         if description_lower.contains("data pipeline") {
             self.generate_data_pipeline_dag(description).await
         } else if description_lower.contains("web scraping") {
             self.generate_web_scraping_dag(description).await
         } else if description_lower.contains("etl") || description_lower.contains("extract") {
             self.generate_etl_dag(description).await
-        } else if description_lower.contains("machine learning") || description_lower.contains("ml") {
+        } else if description_lower.contains("machine learning") || description_lower.contains("ml")
+        {
             self.generate_ml_pipeline_dag(description).await
-        } else if description_lower.contains("sql") || description_lower.contains("database") || description_lower.contains("sqlserver") {
+        } else if description_lower.contains("sql")
+            || description_lower.contains("database")
+            || description_lower.contains("sqlserver")
+        {
             self.generate_database_workflow_dag(description).await
         } else {
             // Generic DAG generation
             self.generate_generic_dag(description).await
         }
     }
-    
+
     /// Generate a data pipeline DAG
     async fn generate_data_pipeline_dag(&self, description: &str) -> Result<GeneratedDAG> {
         let tasks = vec![
@@ -56,7 +60,10 @@ impl NaturalLanguageGenerator {
                 configuration: {
                     let mut config = HashMap::new();
                     config.insert("method".to_string(), serde_json::json!("GET"));
-                    config.insert("url".to_string(), serde_json::json!("https://api.example.com/data"));
+                    config.insert(
+                        "url".to_string(),
+                        serde_json::json!("https://api.example.com/data"),
+                    );
                     config
                 },
             },
@@ -77,7 +84,10 @@ impl NaturalLanguageGenerator {
                 description: "Transform data for storage".to_string(),
                 configuration: {
                     let mut config = HashMap::new();
-                    config.insert("module".to_string(), serde_json::json!("data_transformation"));
+                    config.insert(
+                        "module".to_string(),
+                        serde_json::json!("data_transformation"),
+                    );
                     config.insert("function".to_string(), serde_json::json!("transform"));
                     config
                 },
@@ -94,7 +104,7 @@ impl NaturalLanguageGenerator {
                 },
             },
         ];
-        
+
         let dependencies = vec![
             GeneratedDependency {
                 from_task: "validate_data".to_string(),
@@ -112,7 +122,7 @@ impl NaturalLanguageGenerator {
                 dependency_type: "depends_on".to_string(),
             },
         ];
-        
+
         Ok(GeneratedDAG {
             dag_name: "data_pipeline".to_string(),
             description: description.to_string(),
@@ -122,7 +132,7 @@ impl NaturalLanguageGenerator {
             reasoning: "Generated based on common data pipeline patterns".to_string(),
         })
     }
-    
+
     /// Generate a web scraping DAG
     async fn generate_web_scraping_dag(&self, description: &str) -> Result<GeneratedDAG> {
         let tasks = vec![
@@ -166,12 +176,15 @@ impl NaturalLanguageGenerator {
                 configuration: {
                     let mut config = HashMap::new();
                     config.insert("operation".to_string(), serde_json::json!("create"));
-                    config.insert("destination".to_string(), serde_json::json!("scraped_data.json"));
+                    config.insert(
+                        "destination".to_string(),
+                        serde_json::json!("scraped_data.json"),
+                    );
                     config
                 },
             },
         ];
-        
+
         let dependencies = vec![
             GeneratedDependency {
                 from_task: "parse_content".to_string(),
@@ -189,7 +202,7 @@ impl NaturalLanguageGenerator {
                 dependency_type: "depends_on".to_string(),
             },
         ];
-        
+
         Ok(GeneratedDAG {
             dag_name: "web_scraping".to_string(),
             description: description.to_string(),
@@ -199,7 +212,7 @@ impl NaturalLanguageGenerator {
             reasoning: "Generated based on common web scraping patterns".to_string(),
         })
     }
-    
+
     /// Generate an ETL DAG
     async fn generate_etl_dag(&self, description: &str) -> Result<GeneratedDAG> {
         let tasks = vec![
@@ -237,7 +250,7 @@ impl NaturalLanguageGenerator {
                 },
             },
         ];
-        
+
         let dependencies = vec![
             GeneratedDependency {
                 from_task: "transform".to_string(),
@@ -250,7 +263,7 @@ impl NaturalLanguageGenerator {
                 dependency_type: "depends_on".to_string(),
             },
         ];
-        
+
         Ok(GeneratedDAG {
             dag_name: "etl_pipeline".to_string(),
             description: description.to_string(),
@@ -260,7 +273,7 @@ impl NaturalLanguageGenerator {
             reasoning: "Generated based on standard ETL pattern".to_string(),
         })
     }
-    
+
     /// Generate a machine learning pipeline DAG
     async fn generate_ml_pipeline_dag(&self, description: &str) -> Result<GeneratedDAG> {
         let tasks = vec![
@@ -309,7 +322,7 @@ impl NaturalLanguageGenerator {
                 },
             },
         ];
-        
+
         let dependencies = vec![
             GeneratedDependency {
                 from_task: "preprocess".to_string(),
@@ -327,7 +340,7 @@ impl NaturalLanguageGenerator {
                 dependency_type: "depends_on".to_string(),
             },
         ];
-        
+
         Ok(GeneratedDAG {
             dag_name: "ml_pipeline".to_string(),
             description: description.to_string(),
@@ -337,7 +350,7 @@ impl NaturalLanguageGenerator {
             reasoning: "Generated based on common ML pipeline patterns".to_string(),
         })
     }
-    
+
     /// Generate a generic DAG
     async fn generate_generic_dag(&self, description: &str) -> Result<GeneratedDAG> {
         let tasks = vec![
@@ -362,15 +375,13 @@ impl NaturalLanguageGenerator {
                 },
             },
         ];
-        
-        let dependencies = vec![
-            GeneratedDependency {
-                from_task: "task2".to_string(),
-                to_task: "task1".to_string(),
-                dependency_type: "depends_on".to_string(),
-            },
-        ];
-        
+
+        let dependencies = vec![GeneratedDependency {
+            from_task: "task2".to_string(),
+            to_task: "task1".to_string(),
+            dependency_type: "depends_on".to_string(),
+        }];
+
         Ok(GeneratedDAG {
             dag_name: "generic_dag".to_string(),
             description: description.to_string(),
@@ -380,7 +391,7 @@ impl NaturalLanguageGenerator {
             reasoning: "Generated generic DAG structure".to_string(),
         })
     }
-    
+
     /// Generate a database workflow DAG
     async fn generate_database_workflow_dag(&self, description: &str) -> Result<GeneratedDAG> {
         let tasks = vec![
@@ -390,9 +401,15 @@ impl NaturalLanguageGenerator {
                 description: "Extract data from SQL Server database 1 and save to CSV".to_string(),
                 configuration: {
                     let mut config = HashMap::new();
-                    config.insert("module".to_string(), serde_json::json!("database_operations"));
+                    config.insert(
+                        "module".to_string(),
+                        serde_json::json!("database_operations"),
+                    );
                     config.insert("function".to_string(), serde_json::json!("extract_to_csv"));
-                    config.insert("script".to_string(), serde_json::json!(self.generate_sqlserver_extract_script()));
+                    config.insert(
+                        "script".to_string(),
+                        serde_json::json!(self.generate_sqlserver_extract_script()),
+                    );
                     config
                 },
             },
@@ -402,22 +419,26 @@ impl NaturalLanguageGenerator {
                 description: "Load CSV data to SQL Server database 2".to_string(),
                 configuration: {
                     let mut config = HashMap::new();
-                    config.insert("module".to_string(), serde_json::json!("database_operations"));
+                    config.insert(
+                        "module".to_string(),
+                        serde_json::json!("database_operations"),
+                    );
                     config.insert("function".to_string(), serde_json::json!("load_from_csv"));
-                    config.insert("script".to_string(), serde_json::json!(self.generate_sqlserver_load_script()));
+                    config.insert(
+                        "script".to_string(),
+                        serde_json::json!(self.generate_sqlserver_load_script()),
+                    );
                     config
                 },
             },
         ];
-        
-        let dependencies = vec![
-            GeneratedDependency {
-                from_task: "load_to_sqlserver2".to_string(),
-                to_task: "extract_from_sqlserver1".to_string(),
-                dependency_type: "depends_on".to_string(),
-            },
-        ];
-        
+
+        let dependencies = vec![GeneratedDependency {
+            from_task: "load_to_sqlserver2".to_string(),
+            to_task: "extract_from_sqlserver1".to_string(),
+            dependency_type: "depends_on".to_string(),
+        }];
+
         Ok(GeneratedDAG {
             dag_name: "database_workflow".to_string(),
             description: description.to_string(),
@@ -427,7 +448,7 @@ impl NaturalLanguageGenerator {
             reasoning: "Generated database workflow with SQL Server operations".to_string(),
         })
     }
-    
+
     /// Generate Python script for SQL Server extraction
     fn generate_sqlserver_extract_script(&self) -> String {
         r#"#!/usr/bin/env python3
@@ -501,9 +522,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-"#.to_string()
+"#
+        .to_string()
     }
-    
+
     /// Generate Python script for SQL Server loading
     fn generate_sqlserver_load_script(&self) -> String {
         r#"#!/usr/bin/env python3
@@ -605,18 +627,19 @@ def main():
 
 if __name__ == "__main__":
     main()
-"#.to_string()
+"#
+        .to_string()
     }
-    
+
     /// Convert generated DAG to actual DAG structure
     fn convert_generated_dag_to_dag(&self, generated: GeneratedDAG) -> Result<Dag> {
         let mut dag = Dag::new(generated.dag_name);
-        
+
         // Add tasks
         for task in generated.tasks {
             let mut task_config = TaskConfig::default();
             task_config.task_type = Some(task.task_type.clone());
-            
+
             // Set task-specific configuration
             match task.task_type.as_str() {
                 "shell" => {
@@ -653,21 +676,21 @@ if __name__ == "__main__":
                 }
                 _ => {}
             }
-            
+
             let task = Task {
                 name: task.name,
                 description: Some(task.description),
                 config: task_config,
             };
-            
+
             dag.add_task(task);
         }
-        
+
         // Add dependencies
         for dep in generated.dependencies {
             dag.add_dependency(dep.from_task, dep.to_task);
         }
-        
+
         Ok(dag)
     }
 }
@@ -675,48 +698,48 @@ if __name__ == "__main__":
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_data_pipeline_generation() {
-        let generator = NaturalLanguageGenerator::new(
-            std::sync::Arc::new(crate::ai::RemoteAPIProvider::new().unwrap())
-        );
-        
+        let generator = NaturalLanguageGenerator::new(std::sync::Arc::new(
+            crate::ai::RemoteAPIProvider::new().unwrap(),
+        ));
+
         let description = "Create a data pipeline to process customer data";
         let result = generator.generate_dag(description).await;
-        
+
         assert!(result.is_ok());
         let dag = result.unwrap();
         assert_eq!(dag.name, "data_pipeline");
         assert!(dag.tasks.len() >= 4);
         assert!(dag.dependencies.len() >= 3);
     }
-    
+
     #[tokio::test]
     async fn test_etl_generation() {
-        let generator = NaturalLanguageGenerator::new(
-            std::sync::Arc::new(crate::ai::RemoteAPIProvider::new().unwrap())
-        );
-        
+        let generator = NaturalLanguageGenerator::new(std::sync::Arc::new(
+            crate::ai::RemoteAPIProvider::new().unwrap(),
+        ));
+
         let description = "Create an ETL pipeline";
         let result = generator.generate_dag(description).await;
-        
+
         assert!(result.is_ok());
         let dag = result.unwrap();
         assert_eq!(dag.name, "etl_pipeline");
         assert_eq!(dag.tasks.len(), 3);
         assert_eq!(dag.dependencies.len(), 2);
     }
-    
+
     #[tokio::test]
     async fn test_generic_generation() {
-        let generator = NaturalLanguageGenerator::new(
-            std::sync::Arc::new(crate::ai::RemoteAPIProvider::new().unwrap())
-        );
-        
+        let generator = NaturalLanguageGenerator::new(std::sync::Arc::new(
+            crate::ai::RemoteAPIProvider::new().unwrap(),
+        ));
+
         let description = "Create a simple workflow";
         let result = generator.generate_dag(description).await;
-        
+
         assert!(result.is_ok());
         let dag = result.unwrap();
         assert_eq!(dag.name, "generic_dag");

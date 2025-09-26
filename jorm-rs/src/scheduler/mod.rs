@@ -1,12 +1,11 @@
+pub mod config;
 pub mod cron_scheduler;
 pub mod daemon;
 pub mod triggers;
-pub mod config;
 
-
+pub use config::*;
 pub use cron_scheduler::*;
 pub use daemon::*;
-pub use config::*;
 
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
@@ -110,7 +109,10 @@ impl ScheduledJob {
             Schedule::Cron(expr) => {
                 use std::str::FromStr;
                 if let Ok(schedule) = cron::Schedule::from_str(expr) {
-                    schedule.upcoming(chrono::Utc).next().map(|dt| dt.with_timezone(&Utc))
+                    schedule
+                        .upcoming(chrono::Utc)
+                        .next()
+                        .map(|dt| dt.with_timezone(&Utc))
                 } else {
                     None
                 }

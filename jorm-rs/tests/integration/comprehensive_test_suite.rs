@@ -1,12 +1,12 @@
 //! Comprehensive Test Suite for Jorm
-//! 
+//!
 //! This module replaces all PowerShell test scripts with proper Rust integration tests.
 //! It provides a complete test suite that covers all CLI functionality, interactive mode,
 //! DAG execution, and error handling.
 
-use std::process::{Command, Stdio};
-use std::io::Write;
 use std::fs;
+use std::io::Write;
+use std::process::{Command, Stdio};
 use tempfile::TempDir;
 
 /// Comprehensive test suite for Jorm CLI
@@ -49,7 +49,9 @@ impl ComprehensiveTestSuite {
             .expect("Failed to start interactive process");
 
         if let Some(stdin) = child.stdin.as_mut() {
-            stdin.write_all(input.as_bytes()).expect("Failed to write to stdin");
+            stdin
+                .write_all(input.as_bytes())
+                .expect("Failed to write to stdin");
         }
 
         let output = child.wait_with_output().expect("Failed to read output");
@@ -70,7 +72,7 @@ impl ComprehensiveTestSuite {
     /// Test basic CLI commands
     pub fn test_basic_commands(&self) -> bool {
         println!("Testing basic CLI commands...");
-        
+
         // Test version command
         let (exit_code, stdout, _stderr) = self.run_cli_command(&["version"]);
         if exit_code != 0 || (!stdout.contains("jorm-rs") && !stdout.contains("Jorm-RS")) {
@@ -109,7 +111,7 @@ impl ComprehensiveTestSuite {
     /// Test DAG validation
     pub fn test_dag_validation(&self) -> bool {
         println!("Testing DAG validation...");
-        
+
         // Test valid DAG
         let dag_content = r#"dag: validation_test
 
@@ -153,7 +155,7 @@ dependencies:
     /// Test DAG execution
     pub fn test_dag_execution(&self) -> bool {
         println!("Testing DAG execution...");
-        
+
         // Test simple shell DAG
         let dag_content = r#"dag: execution_test
 
@@ -193,7 +195,10 @@ dependencies:
 
         let dag_path = self.create_dag("dependency_test", dag_content);
         let (exit_code, stdout, _stderr) = self.run_cli_command(&["run", &dag_path]);
-        if exit_code != 0 || !stdout.contains("Task 1 executed") || !stdout.contains("Task 2 executed") {
+        if exit_code != 0
+            || !stdout.contains("Task 1 executed")
+            || !stdout.contains("Task 2 executed")
+        {
             println!("❌ DAG with dependencies execution failed");
             return false;
         }
@@ -227,7 +232,7 @@ dependencies:
     /// Test interactive mode
     pub fn test_interactive_mode(&self) -> bool {
         println!("Testing interactive mode...");
-        
+
         // Test interactive startup
         let (exit_code, stdout, _stderr) = self.run_interactive_command("help\nexit\n");
         if exit_code != 0 {
@@ -253,7 +258,8 @@ dependencies:
         println!("✅ Version command in interactive mode passed");
 
         // Test multiple commands
-        let (exit_code, stdout, _stderr) = self.run_interactive_command("version\nlist\nstatus\nexit\n");
+        let (exit_code, stdout, _stderr) =
+            self.run_interactive_command("version\nlist\nstatus\nexit\n");
         if exit_code != 0 {
             println!("❌ Multiple commands in interactive mode failed");
             return false;
@@ -266,7 +272,7 @@ dependencies:
     /// Test AI features
     pub fn test_ai_features(&self) -> bool {
         println!("Testing AI features...");
-        
+
         // Test model info command
         let (exit_code, _stdout, _stderr) = self.run_cli_command(&["model-info"]);
         if exit_code != 0 {
@@ -302,7 +308,7 @@ dependencies:
     /// Test scheduler features
     pub fn test_scheduler_features(&self) -> bool {
         println!("Testing scheduler features...");
-        
+
         // Test jobs command
         let (exit_code, _stdout, _stderr) = self.run_cli_command(&["jobs"]);
         if exit_code != 0 {
@@ -333,7 +339,12 @@ dependencies:
 
         let dag_path = self.create_dag("schedule_test", dag_content);
         let (exit_code, _stdout, _stderr) = self.run_cli_command(&[
-            "schedule", &dag_path, "--name", "test-schedule", "--cron", "0 0 * * *"
+            "schedule",
+            &dag_path,
+            "--name",
+            "test-schedule",
+            "--cron",
+            "0 0 * * *",
         ]);
         // Schedule command may fail if scheduler is not available, which is expected
         if exit_code != 0 && exit_code != 1 {
@@ -348,7 +359,7 @@ dependencies:
     /// Test error handling
     pub fn test_error_handling(&self) -> bool {
         println!("Testing error handling...");
-        
+
         // Test invalid command
         let (exit_code, _stdout, _stderr) = self.run_cli_command(&["invalid-command"]);
         if exit_code == 0 {
@@ -380,51 +391,51 @@ dependencies:
     pub fn run_all_tests(&self) -> bool {
         println!("🚀 Starting Comprehensive Test Suite for Jorm CLI");
         println!("{}", "=".repeat(60));
-        
+
         let mut all_passed = true;
-        
+
         // Test basic commands
         if !self.test_basic_commands() {
             all_passed = false;
         }
         println!();
-        
+
         // Test DAG validation
         if !self.test_dag_validation() {
             all_passed = false;
         }
         println!();
-        
+
         // Test DAG execution
         if !self.test_dag_execution() {
             all_passed = false;
         }
         println!();
-        
+
         // Test interactive mode
         if !self.test_interactive_mode() {
             all_passed = false;
         }
         println!();
-        
+
         // Test AI features
         if !self.test_ai_features() {
             all_passed = false;
         }
         println!();
-        
+
         // Test scheduler features
         if !self.test_scheduler_features() {
             all_passed = false;
         }
         println!();
-        
+
         // Test error handling
         if !self.test_error_handling() {
             all_passed = false;
         }
         println!();
-        
+
         // Summary
         println!("{}", "=".repeat(60));
         if all_passed {
@@ -433,7 +444,7 @@ dependencies:
             println!("❌ Some tests failed. Please check the output above.");
         }
         println!("{}", "=".repeat(60));
-        
+
         all_passed
     }
 }
@@ -441,5 +452,8 @@ dependencies:
 #[test]
 fn test_comprehensive_suite() {
     let suite = ComprehensiveTestSuite::new();
-    assert!(suite.run_all_tests(), "Comprehensive test suite should pass");
+    assert!(
+        suite.run_all_tests(),
+        "Comprehensive test suite should pass"
+    );
 }

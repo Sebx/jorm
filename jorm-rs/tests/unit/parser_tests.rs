@@ -1,11 +1,11 @@
 //! Parser Unit Tests
-//! 
+//!
 //! This module contains unit tests for the parser functionality.
 
-use jorm_rs::parser::{parse_dag_file, validate_dag, Dag, Task, TaskConfig, Dependency};
-use tempfile::TempDir;
-use std::fs;
+use jorm_rs::parser::{parse_dag_file, validate_dag, Dag, Dependency, Task, TaskConfig};
 use std::collections::HashMap;
+use std::fs;
+use tempfile::TempDir;
 
 #[cfg(test)]
 mod parser_tests {
@@ -15,7 +15,7 @@ mod parser_tests {
     async fn test_parse_txt_file() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("simple.txt");
-        
+
         let content = r#"dag: simple
 schedule: every 10 minutes
 
@@ -27,9 +27,9 @@ tasks:
 dependencies:
 - transform_data after extract_sales
 - load_data after transform_data"#;
-        
+
         fs::write(&file_path, content).unwrap();
-        
+
         let dag = parse_dag_file(file_path.to_str().unwrap()).await.unwrap();
         assert_eq!(dag.name, "simple");
         assert_eq!(dag.schedule, Some("every 10 minutes".to_string()));
@@ -44,7 +44,7 @@ dependencies:
     async fn test_parse_yaml_file() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("simple.yaml");
-        
+
         let content = r#"name: simple_yaml
 schedule: "0 0 * * *"
 
@@ -64,9 +64,9 @@ dependencies:
     depends_on: extract_sales
   - task: load_data
     depends_on: transform_data"#;
-        
+
         fs::write(&file_path, content).unwrap();
-        
+
         let dag = parse_dag_file(file_path.to_str().unwrap()).await.unwrap();
         assert_eq!(dag.name, "simple_yaml");
         assert_eq!(dag.schedule, Some("0 0 * * *".to_string()));
@@ -81,7 +81,7 @@ dependencies:
     async fn test_parse_complex_dag() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("complex.txt");
-        
+
         let content = r#"dag: complex_workflow
 schedule: every 1 hour
 
@@ -96,9 +96,9 @@ dependencies:
 - task_c after task_a
 - task_d after task_b
 - task_d after task_c"#;
-        
+
         fs::write(&file_path, content).unwrap();
-        
+
         let dag = parse_dag_file(file_path.to_str().unwrap()).await.unwrap();
         assert_eq!(dag.name, "complex_workflow");
         assert_eq!(dag.schedule, Some("every 1 hour".to_string()));
@@ -113,20 +113,23 @@ dependencies:
             schedule: None,
             tasks: {
                 let mut tasks = HashMap::new();
-                tasks.insert("task1".to_string(), Task {
-                    name: "task1".to_string(),
-                    description: Some("Test task 1".to_string()),
-                    config: TaskConfig {
-                        task_type: Some("shell".to_string()),
-                        command: Some("echo 'Hello'".to_string()),
-                        ..Default::default()
+                tasks.insert(
+                    "task1".to_string(),
+                    Task {
+                        name: "task1".to_string(),
+                        description: Some("Test task 1".to_string()),
+                        config: TaskConfig {
+                            task_type: Some("shell".to_string()),
+                            command: Some("echo 'Hello'".to_string()),
+                            ..Default::default()
+                        },
                     },
-                });
+                );
                 tasks
             },
             dependencies: vec![],
         };
-        
+
         let errors = validate_dag(&dag).unwrap();
         assert!(errors.is_empty());
     }
@@ -138,34 +141,38 @@ dependencies:
             schedule: None,
             tasks: {
                 let mut tasks = HashMap::new();
-                tasks.insert("task_a".to_string(), Task {
-                    name: "task_a".to_string(),
-                    description: Some("Task A".to_string()),
-                    config: TaskConfig {
-                        task_type: Some("shell".to_string()),
-                        command: Some("echo 'A'".to_string()),
-                        ..Default::default()
+                tasks.insert(
+                    "task_a".to_string(),
+                    Task {
+                        name: "task_a".to_string(),
+                        description: Some("Task A".to_string()),
+                        config: TaskConfig {
+                            task_type: Some("shell".to_string()),
+                            command: Some("echo 'A'".to_string()),
+                            ..Default::default()
+                        },
                     },
-                });
-                tasks.insert("task_b".to_string(), Task {
-                    name: "task_b".to_string(),
-                    description: Some("Task B".to_string()),
-                    config: TaskConfig {
-                        task_type: Some("shell".to_string()),
-                        command: Some("echo 'B'".to_string()),
-                        ..Default::default()
+                );
+                tasks.insert(
+                    "task_b".to_string(),
+                    Task {
+                        name: "task_b".to_string(),
+                        description: Some("Task B".to_string()),
+                        config: TaskConfig {
+                            task_type: Some("shell".to_string()),
+                            command: Some("echo 'B'".to_string()),
+                            ..Default::default()
+                        },
                     },
-                });
+                );
                 tasks
             },
-            dependencies: vec![
-                Dependency {
-                    task: "task_b".to_string(),
-                    depends_on: "task_a".to_string(),
-                },
-            ],
+            dependencies: vec![Dependency {
+                task: "task_b".to_string(),
+                depends_on: "task_a".to_string(),
+            }],
         };
-        
+
         let errors = validate_dag(&dag).unwrap();
         assert!(errors.is_empty());
     }
@@ -177,25 +184,26 @@ dependencies:
             schedule: None,
             tasks: {
                 let mut tasks = HashMap::new();
-                tasks.insert("task1".to_string(), Task {
-                    name: "task1".to_string(),
-                    description: Some("Task 1".to_string()),
-                    config: TaskConfig {
-                        task_type: Some("shell".to_string()),
-                        command: Some("echo 'Hello'".to_string()),
-                        ..Default::default()
+                tasks.insert(
+                    "task1".to_string(),
+                    Task {
+                        name: "task1".to_string(),
+                        description: Some("Task 1".to_string()),
+                        config: TaskConfig {
+                            task_type: Some("shell".to_string()),
+                            command: Some("echo 'Hello'".to_string()),
+                            ..Default::default()
+                        },
                     },
-                });
+                );
                 tasks
             },
-            dependencies: vec![
-                Dependency {
-                    task: "task1".to_string(),
-                    depends_on: "nonexistent_task".to_string(),
-                },
-            ],
+            dependencies: vec![Dependency {
+                task: "task1".to_string(),
+                depends_on: "nonexistent_task".to_string(),
+            }],
         };
-        
+
         let errors = validate_dag(&dag).unwrap();
         assert!(!errors.is_empty());
     }
@@ -208,7 +216,7 @@ dependencies:
             tasks: HashMap::new(),
             dependencies: vec![],
         };
-        
+
         let errors = validate_dag(&dag).unwrap();
         assert!(!errors.is_empty());
     }
@@ -220,27 +228,27 @@ dependencies:
             command: Some("echo 'hello'".to_string()),
             ..Default::default()
         };
-        
+
         let python_config = TaskConfig {
             task_type: Some("python".to_string()),
             script: Some("print('hello')".to_string()),
             ..Default::default()
         };
-        
+
         let http_config = TaskConfig {
             task_type: Some("http".to_string()),
             method: Some("GET".to_string()),
             url: Some("https://api.example.com".to_string()),
             ..Default::default()
         };
-        
+
         let file_config = TaskConfig {
             task_type: Some("file".to_string()),
             script: Some("Hello, World!".to_string()),
             destination: Some("output.txt".to_string()),
             ..Default::default()
         };
-        
+
         // Test that configs are created successfully
         assert!(matches!(shell_config.task_type, Some(ref t) if t == "shell"));
         assert!(matches!(python_config.task_type, Some(ref t) if t == "python"));
@@ -258,10 +266,10 @@ dependencies:
     async fn test_parse_invalid_file() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("invalid.txt");
-        
+
         let content = "this is not a valid DAG file";
         fs::write(&file_path, content).unwrap();
-        
+
         let result = parse_dag_file(file_path.to_str().unwrap()).await;
         assert!(result.is_err());
     }
@@ -272,7 +280,7 @@ dependencies:
             task: "task2".to_string(),
             depends_on: "task1".to_string(),
         };
-        
+
         assert_eq!(dep.task, "task2");
         assert_eq!(dep.depends_on, "task1");
     }
@@ -284,20 +292,23 @@ dependencies:
             schedule: Some("every 1 minute".to_string()),
             tasks: {
                 let mut tasks = HashMap::new();
-                tasks.insert("task1".to_string(), Task {
-                    name: "task1".to_string(),
-                    description: Some("Task 1".to_string()),
-                    config: TaskConfig {
-                        task_type: Some("shell".to_string()),
-                        command: Some("echo 'Hello'".to_string()),
-                        ..Default::default()
+                tasks.insert(
+                    "task1".to_string(),
+                    Task {
+                        name: "task1".to_string(),
+                        description: Some("Task 1".to_string()),
+                        config: TaskConfig {
+                            task_type: Some("shell".to_string()),
+                            command: Some("echo 'Hello'".to_string()),
+                            ..Default::default()
+                        },
                     },
-                });
+                );
                 tasks
             },
             dependencies: vec![],
         };
-        
+
         assert_eq!(dag.name, "test_dag");
         assert_eq!(dag.schedule, Some("every 1 minute".to_string()));
         assert_eq!(dag.tasks.len(), 1);

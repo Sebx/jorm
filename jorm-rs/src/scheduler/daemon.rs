@@ -1,5 +1,5 @@
 use super::{CronScheduler, SchedulerEvent};
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -35,29 +35,32 @@ impl SchedulerDaemon {
         // Write PID file if specified
         if let Some(pid_file) = &self.pid_file {
             let pid = std::process::id();
-            tokio::fs::write(pid_file, pid.to_string()).await
+            tokio::fs::write(pid_file, pid.to_string())
+                .await
                 .context("Failed to write PID file")?;
         }
 
         // Start the scheduler
-        self.scheduler.start().await
+        self.scheduler
+            .start()
+            .await
             .context("Failed to start scheduler")?;
 
         // Set up event logging
         let event_receiver = self.scheduler.event_receiver();
         let log_file = self.log_file.clone();
-        
+
         tokio::spawn(async move {
             let mut receiver = event_receiver.lock().await;
-            
+
             while let Some(event) = receiver.recv().await {
                 let log_message = format_event(&event);
-                
+
                 if let Some(log_file) = &log_file {
                     // Write to log file
                     let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
                     let log_line = format!("[{}] {}\n", timestamp, log_message);
-                    
+
                     let write_result = async {
                         use tokio::io::AsyncWriteExt;
                         let mut file = tokio::fs::OpenOptions::new()
@@ -66,10 +69,10 @@ impl SchedulerDaemon {
                             .open(log_file)
                             .await?;
                         file.write_all(log_line.as_bytes()).await
-                    }.await;
-                    
-                    if let Err(e) = write_result
-                    {
+                    }
+                    .await;
+
+                    if let Err(e) = write_result {
                         eprintln!("Failed to write to log file: {}", e);
                     }
                 } else {
@@ -84,7 +87,7 @@ impl SchedulerDaemon {
         {
             let scheduler_for_signal = Arc::clone(&self.scheduler);
             let pid_file_for_signal = self.pid_file.clone();
-            
+
             tokio::spawn(async move {
                 let mut sigterm = signal::unix::signal(signal::unix::SignalKind::terminate())
                     .expect("Failed to register SIGTERM handler");
@@ -121,9 +124,11 @@ impl SchedulerDaemon {
         {
             let scheduler_for_signal = Arc::clone(&self.scheduler);
             let pid_file_for_signal = self.pid_file.clone();
-            
+
             tokio::spawn(async move {
-                tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("Failed to listen for ctrl+c");
                 println!("Received Ctrl+C, shutting down gracefully...");
 
                 // Stop the scheduler
@@ -150,24 +155,24 @@ impl SchedulerDaemon {
 
     pub async fn stop(&self) -> Result<()> {
         self.scheduler.stop().await?;
-        
+
         // Clean up PID file
         if let Some(pid_file) = &self.pid_file {
-            tokio::fs::remove_file(pid_file).await
+            tokio::fs::remove_file(pid_file)
+                .await
                 .context("Failed to remove PID file")?;
         }
-        
+
         Ok(())
     }
 
     pub fn is_running(&self) -> Result<bool> {
         if let Some(pid_file) = &self.pid_file {
             if pid_file.exists() {
-                let pid_str = std::fs::read_to_string(pid_file)
-                    .context("Failed to read PID file")?;
-                let pid: u32 = pid_str.trim().parse()
-                    .context("Invalid PID in PID file")?;
-                
+                let pid_str =
+                    std::fs::read_to_string(pid_file).context("Failed to read PID file")?;
+                let pid: u32 = pid_str.trim().parse().context("Invalid PID in PID file")?;
+
                 // Check if process is still running
                 Ok(is_process_running(pid))
             } else {
@@ -189,8 +194,10 @@ fn format_event(event: &SchedulerEvent) -> String {
             format!("Job {} started", job_id)
         }
         SchedulerEvent::JobCompleted(job_id, result) => {
-            format!("Job {} completed successfully in {:?}: {}", 
-                job_id, result.duration, result.output)
+            format!(
+                "Job {} completed successfully in {:?}: {}",
+                job_id, result.duration, result.output
+            )
         }
         SchedulerEvent::JobFailed(job_id, error) => {
             format!("Job {} failed: {}", job_id, error)
@@ -198,19 +205,15 @@ fn format_event(event: &SchedulerEvent) -> String {
         SchedulerEvent::JobCancelled(job_id) => {
             format!("Job {} cancelled", job_id)
         }
-        SchedulerEvent::SchedulerStarted => {
-            "Scheduler started".to_string()
-        }
-        SchedulerEvent::SchedulerStopped => {
-            "Scheduler stopped".to_string()
-        }
+        SchedulerEvent::SchedulerStarted => "Scheduler started".to_string(),
+        SchedulerEvent::SchedulerStopped => "Scheduler stopped".to_string(),
     }
 }
 
 #[cfg(unix)]
 fn is_process_running(pid: u32) -> bool {
     use std::process::Command;
-    
+
     Command::new("kill")
         .arg("-0")
         .arg(pid.to_string())
@@ -222,7 +225,7 @@ fn is_process_running(pid: u32) -> bool {
 #[cfg(windows)]
 fn is_process_running(pid: u32) -> bool {
     use std::process::Command;
-    
+
     Command::new("tasklist")
         .arg("/FI")
         .arg(format!("PID eq {}", pid))
@@ -243,7 +246,7 @@ mod tests {
     async fn test_daemon_creation() {
         let scheduler = CronScheduler::new();
         let daemon = SchedulerDaemon::new(scheduler);
-        
+
         // Test that daemon can be created
         assert!(daemon.pid_file.is_none());
         assert!(daemon.log_file.is_none());
@@ -254,12 +257,12 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let pid_file = temp_dir.path().join("test.pid");
         let log_file = temp_dir.path().join("test.log");
-        
+
         let scheduler = CronScheduler::new();
         let daemon = SchedulerDaemon::new(scheduler)
             .with_pid_file(pid_file.clone())
             .with_log_file(log_file.clone());
-        
+
         assert_eq!(daemon.pid_file, Some(pid_file));
         assert_eq!(daemon.log_file, Some(log_file));
     }

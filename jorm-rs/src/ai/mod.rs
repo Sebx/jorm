@@ -1,35 +1,35 @@
 //! AI-powered features for Jorm
-//! 
+//!
 //! This module provides intelligent DAG analysis, natural language processing,
 //! and automated optimization suggestions using local language models.
 
-pub mod models;
 pub mod analysis;
-pub mod generation;
 pub mod chat;
-pub mod model_manager;
+pub mod generation;
 pub mod interactive;
+pub mod model_manager;
+pub mod models;
 
-pub use models::*;
 pub use analysis::*;
-pub use generation::*;
 pub use chat::*;
+pub use generation::*;
+pub use models::*;
 
 use anyhow::Result;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// AI service for intelligent DAG operations
 pub struct AIService {
     /// Language model provider
     model_provider: Arc<dyn LanguageModelProvider>,
-    
+
     /// Analysis engine for DAG optimization
     analysis_engine: DAGAnalysisEngine,
-    
+
     /// Natural language to DAG generator
     nl_generator: NaturalLanguageGenerator,
-    
+
     /// Chat interface for interactive DAG management
     chat_interface: ChatInterface,
 }
@@ -41,7 +41,7 @@ impl AIService {
         let analysis_engine = DAGAnalysisEngine::new(model_provider.clone());
         let nl_generator = NaturalLanguageGenerator::new(model_provider.clone());
         let chat_interface = ChatInterface::new(model_provider.clone());
-        
+
         Ok(Self {
             model_provider,
             analysis_engine,
@@ -49,15 +49,13 @@ impl AIService {
             chat_interface,
         })
     }
-    
+
     /// Create a new AI service with custom model provider
-    pub fn with_model_provider(
-        model_provider: Arc<dyn LanguageModelProvider>,
-    ) -> Self {
+    pub fn with_model_provider(model_provider: Arc<dyn LanguageModelProvider>) -> Self {
         let analysis_engine = DAGAnalysisEngine::new(model_provider.clone());
         let nl_generator = NaturalLanguageGenerator::new(model_provider.clone());
         let chat_interface = ChatInterface::new(model_provider.clone());
-        
+
         Self {
             model_provider,
             analysis_engine,
@@ -65,7 +63,7 @@ impl AIService {
             chat_interface,
         }
     }
-    
+
     /// Create default model provider (Phi-3 Mini)
     async fn create_default_model_provider() -> Result<Arc<dyn LanguageModelProvider>> {
         // Try to create Phi-3 Mini provider first
@@ -83,12 +81,12 @@ impl AIService {
             }
         }
     }
-    
+
     /// Analyze a DAG and provide optimization suggestions
     pub async fn analyze_dag(&self, dag: &crate::parser::Dag) -> Result<DAGAnalysis> {
         self.analysis_engine.analyze(dag).await
     }
-    
+
     /// Generate a DAG from natural language description
     pub async fn generate_dag_from_natural_language(
         &self,
@@ -96,12 +94,12 @@ impl AIService {
     ) -> Result<crate::parser::Dag> {
         self.nl_generator.generate_dag(description).await
     }
-    
+
     /// Start interactive chat interface
     pub async fn start_chat(&self) -> Result<()> {
         self.chat_interface.start().await
     }
-    
+
     /// Get model information
     pub fn model_info(&self) -> ModelInfo {
         self.model_provider.model_info()
@@ -231,7 +229,7 @@ pub struct ComplexityMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_ai_service_creation() {
         // This test might fail if no models are available

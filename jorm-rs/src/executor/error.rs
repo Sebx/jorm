@@ -12,67 +12,49 @@ pub enum ExecutorError {
         #[source]
         source: anyhow::Error,
     },
-    
+
     #[error("Dependency cycle detected in DAG")]
     DependencyCycle,
-    
+
     #[error("Task timeout: {task_id} exceeded {timeout:?}")]
-    TaskTimeout {
-        task_id: String,
-        timeout: Duration,
-    },
-    
+    TaskTimeout { task_id: String, timeout: Duration },
+
     #[error("Resource limit exceeded: {resource}")]
-    ResourceLimitExceeded {
-        resource: String,
-    },
-    
+    ResourceLimitExceeded { resource: String },
+
     #[error("State persistence error")]
     StatePersistenceError(#[from] sqlx::Error),
-    
+
     #[error("Configuration error: {message}")]
-    ConfigurationError {
-        message: String,
-    },
-    
+    ConfigurationError { message: String },
+
     #[error("Unsupported task type: {task_type}")]
-    UnsupportedTaskType {
-        task_type: String,
-    },
-    
+    UnsupportedTaskType { task_type: String },
+
     #[error("Task not found: {task_id}")]
-    TaskNotFound {
-        task_id: String,
-    },
-    
+    TaskNotFound { task_id: String },
+
     #[error("Execution context error: {message}")]
-    ExecutionContextError {
-        message: String,
-    },
-    
+    ExecutionContextError { message: String },
+
     #[error("Retry limit exceeded for task: {task_id}")]
-    RetryLimitExceeded {
-        task_id: String,
-        attempts: u32,
-    },
-    
+    RetryLimitExceeded { task_id: String, attempts: u32 },
+
     #[error("Semaphore acquisition failed")]
     SemaphoreError(#[from] tokio::sync::AcquireError),
-    
+
     #[error("IO error: {message}")]
     IoError {
         message: String,
         #[source]
         source: std::io::Error,
     },
-    
+
     #[error("Serialization error")]
     SerializationError(#[from] serde_json::Error),
-    
+
     #[error("Task registry error: {message}")]
-    TaskRegistryError {
-        message: String,
-    },
+    TaskRegistryError { message: String },
 }
 
 /// Result type for executor operations
@@ -98,7 +80,7 @@ impl ExecutorError {
             _ => false,
         }
     }
-    
+
     /// Get the task ID associated with this error, if any
     pub fn task_id(&self) -> Option<&str> {
         match self {
@@ -109,7 +91,7 @@ impl ExecutorError {
             _ => None,
         }
     }
-    
+
     /// Check if this is a recoverable error
     pub fn is_recoverable(&self) -> bool {
         match self {
@@ -121,4 +103,3 @@ impl ExecutorError {
         }
     }
 }
-

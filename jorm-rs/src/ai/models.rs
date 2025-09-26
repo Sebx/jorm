@@ -1,33 +1,36 @@
 //! Language model providers for AI features
 
+use crate::ai::model_manager::{ModelConfigs, ModelManager};
+use crate::ai::ModelInfo;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::ai::ModelInfo;
-use crate::ai::model_manager::{ModelManager, ModelConfigs};
 
 /// Trait for language model providers
 #[async_trait]
 pub trait LanguageModelProvider: Send + Sync {
     /// Generate a response to a prompt
     async fn generate_response(&self, prompt: &str, context: &ModelContext) -> Result<String>;
-    
+
     /// Analyze a DAG and provide insights
     async fn analyze_dag(&self, dag_content: &str) -> Result<DAGInsights>;
-    
+
     /// Suggest improvements for a DAG
-    async fn suggest_improvements(&self, dag: &DAGAnalysisInput) -> Result<Vec<ImprovementSuggestion>>;
-    
+    async fn suggest_improvements(
+        &self,
+        dag: &DAGAnalysisInput,
+    ) -> Result<Vec<ImprovementSuggestion>>;
+
     /// Explain an error in context
     async fn explain_error(&self, error: &str, context: &ErrorContext) -> Result<String>;
-    
+
     /// Generate a DAG from natural language description
     async fn generate_dag_from_description(&self, description: &str) -> Result<GeneratedDAG>;
-    
+
     /// Get model information
     fn model_info(&self) -> ModelInfo;
-    
+
     /// Check if the model is available
     async fn is_available(&self) -> bool;
 }
@@ -171,14 +174,14 @@ impl Phi3Provider {
                 "optimization_suggestions".to_string(),
             ],
         };
-        
+
         // Try to create model manager
         let model_config = ModelConfigs::phi3_mini();
         let model_manager = match ModelManager::new(model_config) {
             Ok(manager) => Some(manager),
             Err(_) => None,
         };
-        
+
         Ok(Self {
             model_info,
             model_manager,
@@ -195,10 +198,12 @@ impl LanguageModelProvider for Phi3Provider {
                 println!("🔄 Loading Phi-3 model on-demand...");
                 manager.load_model().await?;
             }
-            
+
             // Provide intelligent responses based on the prompt
             let prompt_lower = prompt.to_lowercase();
-            let response = if prompt_lower.contains("help") || prompt_lower.contains("what can you do") {
+            let response = if prompt_lower.contains("help")
+                || prompt_lower.contains("what can you do")
+            {
                 "🤖 I'm Jorm AI, your DAG workflow assistant! Here's what I can do:\n\n**DAG Management:**\n• Create DAGs from natural language descriptions\n• Analyze existing DAGs for optimization\n• Validate DAG syntax and dependencies\n• Execute DAGs with various options\n\n**Available Commands:**\n• `run <file>` - Execute a DAG\n• `validate <file>` - Check DAG syntax\n• `describe <file>` - Show DAG structure\n• `analyze <file>` - Analyze for optimization\n• `generate <description>` - Create DAG from text\n• `help` - Show this help\n\n**Natural Language:**\nJust ask me in plain English! I can help with:\n• \"Create a data processing pipeline\"\n• \"Analyze my workflow for bottlenecks\"\n• \"Help me run my DAG\"\n\nWhat would you like to do?".to_string()
             } else if prompt_lower.contains("dag") || prompt_lower.contains("workflow") {
                 if prompt_lower.contains("create") || prompt_lower.contains("generate") {
@@ -218,17 +223,17 @@ impl LanguageModelProvider for Phi3Provider {
             Err(anyhow::anyhow!("Phi-3 model manager not available"))
         }
     }
-    
+
     async fn analyze_dag(&self, dag_content: &str) -> Result<DAGInsights> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Phi-3 model not loaded"));
         }
-        
+
         // Analyze DAG content for patterns and provide insights
         let task_count = dag_content.matches("task:").count();
         let dependency_count = dag_content.matches("depends_on:").count();
         let complexity_score = (task_count as f64 * 0.1 + dependency_count as f64 * 0.05).min(1.0);
-        
+
         let mut performance_notes = Vec::new();
         if dag_content.contains("shell:") {
             performance_notes.push("Shell tasks detected - consider timeout settings".to_string());
@@ -237,25 +242,29 @@ impl LanguageModelProvider for Phi3Provider {
             performance_notes.push("HTTP tasks detected - consider retry mechanisms".to_string());
         }
         if task_count > 10 {
-            performance_notes.push("Large number of tasks - consider breaking into smaller DAGs".to_string());
+            performance_notes
+                .push("Large number of tasks - consider breaking into smaller DAGs".to_string());
         }
-        
+
         let mut potential_issues = Vec::new();
         if dag_content.contains("timeout:") && dag_content.contains("timeout: 0") {
             potential_issues.push("Zero timeout detected - may cause hanging tasks".to_string());
         }
         if dag_content.contains("shell:") && !dag_content.contains("timeout:") {
-            potential_issues.push("Shell tasks without timeout - consider adding timeout".to_string());
+            potential_issues
+                .push("Shell tasks without timeout - consider adding timeout".to_string());
         }
-        
+
         let mut optimization_opportunities = Vec::new();
         if dag_content.contains("shell:") && dag_content.contains("http:") {
-            optimization_opportunities.push("Mixed task types detected - consider grouping similar tasks".to_string());
+            optimization_opportunities
+                .push("Mixed task types detected - consider grouping similar tasks".to_string());
         }
         if task_count > 5 {
-            optimization_opportunities.push("Multiple tasks available - consider parallel execution".to_string());
+            optimization_opportunities
+                .push("Multiple tasks available - consider parallel execution".to_string());
         }
-        
+
         Ok(DAGInsights {
             complexity_score,
             performance_notes,
@@ -265,34 +274,41 @@ impl LanguageModelProvider for Phi3Provider {
                 estimated_duration: "Estimated based on task types".to_string(),
                 memory_usage: "Varies by task requirements".to_string(),
                 cpu_requirements: "Depends on parallelization".to_string(),
-                network_requirements: if dag_content.contains("http") { Some("Network access required".to_string()) } else { None },
+                network_requirements: if dag_content.contains("http") {
+                    Some("Network access required".to_string())
+                } else {
+                    None
+                },
             },
         })
     }
-    
-    async fn suggest_improvements(&self, _dag: &DAGAnalysisInput) -> Result<Vec<ImprovementSuggestion>> {
+
+    async fn suggest_improvements(
+        &self,
+        _dag: &DAGAnalysisInput,
+    ) -> Result<Vec<ImprovementSuggestion>> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Phi-3 model not loaded"));
         }
-        
+
         // TODO: Implement actual improvement suggestions
         Ok(vec![])
     }
-    
+
     async fn explain_error(&self, error: &str, _context: &ErrorContext) -> Result<String> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Phi-3 model not loaded"));
         }
-        
+
         // TODO: Implement actual error explanation
         Ok(format!("[Phi-3 Error explanation for: {}]", error))
     }
-    
+
     async fn generate_dag_from_description(&self, description: &str) -> Result<GeneratedDAG> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Phi-3 model not loaded"));
         }
-        
+
         // TODO: Implement actual DAG generation
         Ok(GeneratedDAG {
             dag_name: "Generated DAG".to_string(),
@@ -303,11 +319,11 @@ impl LanguageModelProvider for Phi3Provider {
             reasoning: "DAG generation not yet implemented".to_string(),
         })
     }
-    
+
     fn model_info(&self) -> ModelInfo {
         self.model_info.clone()
     }
-    
+
     async fn is_available(&self) -> bool {
         if let Some(manager) = &self.model_manager {
             manager.is_available().await
@@ -337,7 +353,7 @@ impl GemmaProvider {
                 "error_explanation".to_string(),
             ],
         };
-        
+
         // TODO: Implement actual model loading
         Ok(Self {
             model_info,
@@ -352,16 +368,16 @@ impl LanguageModelProvider for GemmaProvider {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Gemma model not loaded"));
         }
-        
+
         // TODO: Implement actual model inference
         Ok(format!("[Gemma Response to: {}]", prompt))
     }
-    
+
     async fn analyze_dag(&self, _dag_content: &str) -> Result<DAGInsights> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Gemma model not loaded"));
         }
-        
+
         // TODO: Implement actual DAG analysis
         Ok(DAGInsights {
             complexity_score: 0.5,
@@ -376,30 +392,33 @@ impl LanguageModelProvider for GemmaProvider {
             },
         })
     }
-    
-    async fn suggest_improvements(&self, _dag: &DAGAnalysisInput) -> Result<Vec<ImprovementSuggestion>> {
+
+    async fn suggest_improvements(
+        &self,
+        _dag: &DAGAnalysisInput,
+    ) -> Result<Vec<ImprovementSuggestion>> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Gemma model not loaded"));
         }
-        
+
         // TODO: Implement actual improvement suggestions
         Ok(vec![])
     }
-    
+
     async fn explain_error(&self, error: &str, _context: &ErrorContext) -> Result<String> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Gemma model not loaded"));
         }
-        
+
         // TODO: Implement actual error explanation
         Ok(format!("[Gemma Error explanation for: {}]", error))
     }
-    
+
     async fn generate_dag_from_description(&self, description: &str) -> Result<GeneratedDAG> {
         if !self.is_available().await {
             return Err(anyhow::anyhow!("Gemma model not loaded"));
         }
-        
+
         // TODO: Implement actual DAG generation
         Ok(GeneratedDAG {
             dag_name: "Generated DAG".to_string(),
@@ -410,11 +429,11 @@ impl LanguageModelProvider for GemmaProvider {
             reasoning: "DAG generation not yet implemented".to_string(),
         })
     }
-    
+
     fn model_info(&self) -> ModelInfo {
         self.model_info.clone()
     }
-    
+
     async fn is_available(&self) -> bool {
         self.is_loaded
     }
@@ -433,7 +452,7 @@ impl RemoteAPIProvider {
         let model_info = ModelInfo {
             name: "Remote API Provider".to_string(),
             version: "1.0".to_string(),
-            parameters: 0, // Unknown for remote APIs
+            parameters: 0,   // Unknown for remote APIs
             memory_usage: 0, // No local memory usage
             capabilities: vec![
                 "dag_analysis".to_string(),
@@ -442,7 +461,7 @@ impl RemoteAPIProvider {
                 "optimization_suggestions".to_string(),
             ],
         };
-        
+
         Ok(Self {
             model_info,
             api_key: std::env::var("OPENAI_API_KEY").ok(),
@@ -457,16 +476,16 @@ impl LanguageModelProvider for RemoteAPIProvider {
         if self.api_key.is_none() {
             return Err(anyhow::anyhow!("No API key configured"));
         }
-        
+
         // TODO: Implement actual API calls
         Ok(format!("[Remote API Response to: {}]", prompt))
     }
-    
+
     async fn analyze_dag(&self, _dag_content: &str) -> Result<DAGInsights> {
         if self.api_key.is_none() {
             return Err(anyhow::anyhow!("No API key configured"));
         }
-        
+
         // TODO: Implement actual API calls
         Ok(DAGInsights {
             complexity_score: 0.5,
@@ -481,30 +500,33 @@ impl LanguageModelProvider for RemoteAPIProvider {
             },
         })
     }
-    
-    async fn suggest_improvements(&self, _dag: &DAGAnalysisInput) -> Result<Vec<ImprovementSuggestion>> {
+
+    async fn suggest_improvements(
+        &self,
+        _dag: &DAGAnalysisInput,
+    ) -> Result<Vec<ImprovementSuggestion>> {
         if self.api_key.is_none() {
             return Err(anyhow::anyhow!("No API key configured"));
         }
-        
+
         // TODO: Implement actual API calls
         Ok(vec![])
     }
-    
+
     async fn explain_error(&self, error: &str, _context: &ErrorContext) -> Result<String> {
         if self.api_key.is_none() {
             return Err(anyhow::anyhow!("No API key configured"));
         }
-        
+
         // TODO: Implement actual API calls
         Ok(format!("[Remote API Error explanation for: {}]", error))
     }
-    
+
     async fn generate_dag_from_description(&self, description: &str) -> Result<GeneratedDAG> {
         if self.api_key.is_none() {
             return Err(anyhow::anyhow!("No API key configured"));
         }
-        
+
         // TODO: Implement actual API calls
         Ok(GeneratedDAG {
             dag_name: "Generated DAG".to_string(),
@@ -515,11 +537,11 @@ impl LanguageModelProvider for RemoteAPIProvider {
             reasoning: "Remote API DAG generation not yet implemented".to_string(),
         })
     }
-    
+
     fn model_info(&self) -> ModelInfo {
         self.model_info.clone()
     }
-    
+
     async fn is_available(&self) -> bool {
         self.api_key.is_some()
     }
@@ -528,7 +550,7 @@ impl LanguageModelProvider for RemoteAPIProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_phi3_provider_creation() {
         match Phi3Provider::new().await {
@@ -542,7 +564,7 @@ mod tests {
             }
         }
     }
-    
+
     #[tokio::test]
     async fn test_gemma_provider_creation() {
         match GemmaProvider::new().await {
@@ -556,7 +578,7 @@ mod tests {
             }
         }
     }
-    
+
     #[tokio::test]
     async fn test_remote_api_provider_creation() {
         match RemoteAPIProvider::new() {
