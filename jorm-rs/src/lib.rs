@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 //! Jorm-RS - Pure Rust DAG Engine
 //!
 //! A high-performance, pure Rust implementation of a Directed Acyclic Graph (DAG) execution engine.
