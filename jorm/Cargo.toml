@@ -2,8 +2,23 @@
 name = "jorm"
 version = "0.1.0"
 edition = "2021"
-description = "A fast, reliable DAG execution engine - Rust backend"
-authors = ["Sebx"]
+description = "A fast, reliable DAG execution engine with native Rust performance"
+authors = ["Sebx <sebx@example.com>"]
+license = "MIT"
+repository = "https://github.com/sebx/jorm"
+homepage = "https://github.com/sebx/jorm"
+documentation = "https://docs.rs/jorm"
+readme = "README.md"
+keywords = ["dag", "workflow", "execution", "parallel", "automation"]
+categories = ["command-line-utilities", "development-tools", "concurrency"]
+exclude = [
+    "tests/",
+    "examples/",
+    ".github/",
+    ".kiro/",
+    "*.md",
+    "run_integration_tests.rs"
+]
 
 [dependencies]
 # CLI framework
@@ -53,9 +68,10 @@ config = "0.14"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
 tracing-appender = "0.2"
+# Directory utilities
 dirs = "5.0"
+# TOML parsing
 toml = "0.8"
-hostname = "0.3"
 
 # Daemon/service management (Unix only)
 [target.'cfg(unix)'.dependencies]
@@ -64,8 +80,6 @@ signal-hook = "0.3"
 signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
 # HTTP server for webhooks
 hyper = { version = "0.14", features = ["full"] }
-# TOML parsing
-toml = "0.8"
 # Timezone support
 chrono-tz = "0.8"
 # AI/ML dependencies for Phase 3
@@ -77,14 +91,8 @@ tokenizers = "0.15"
 ort = { version = "2.0.0-rc.10" }
 # Hugging Face Hub for model downloads
 hf-hub = "0.3"
-# Async HTTP client for model downloads (already included above)
-# reqwest = { version = "0.11", features = ["json", "stream"] }
 # Progress bars for model downloads
 indicatif = "0.17"
-# Directory utilities
-dirs = "5.0"
-# Configuration file parsing
-config = "0.14"
 # Hostname detection
 hostname = { version = "0.3", optional = true }
 
