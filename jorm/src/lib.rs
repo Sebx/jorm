@@ -1,20 +1,21 @@
-#![allow(clippy::all)]
-//! JORM - Pure Rust DAG Engine
-//!
-//! A high-performance, pure Rust implementation of a Directed Acyclic Graph (DAG) execution engine.
-//! This library provides the core functionality for parsing, validating, and executing DAGs.
+// Jorm - Simplified DAG Execution Engine
+// Core library exports
 
-pub mod ai;
-pub mod application;
-pub mod domain;
-pub mod executor;
-pub mod infrastructure;
-pub mod observability;
+pub mod core;
 pub mod parser;
+pub mod executor;
+pub mod nlp;
+pub mod server;
 pub mod scheduler;
-pub mod shebang;
 
-// Re-export commonly used types for easier access
-pub use executor::{ExecutionStatus, ExecutorConfig, NativeExecutor, TaskStatus};
-pub use parser::{parse_dag_file, validate_dag, Dag};
-pub use scheduler::{CronScheduler, Schedule, ScheduledJob, SchedulerConfig};
+// Re-export main types for convenience
+pub use core::{engine::JormEngine, dag::Dag, task::{Task, TaskType}};
+pub use parser::dag_parser::DagParser;
+pub use executor::TaskExecutor;
+pub use nlp::generator::{NlpProcessor, DagPreview, DagEdit};
+
+// Error types
+pub use core::error::JormError;
+
+// Result type alias
+pub type Result<T> = std::result::Result<T, JormError>;

@@ -1,4 +1,4 @@
-pub mod dag_parser;
+pub mod generator;
 
 #[cfg(test)]
 mod tests;

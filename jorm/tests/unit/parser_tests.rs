@@ -1,321 +1,318 @@
-//! Parser Unit Tests
-//!
-#![allow(unused_variables, dead_code)]
-#![allow(clippy::assertions_on_constants, clippy::field_reassign_with_default)]
-//! Parser Unit Tests
-//! 
-//! This module contains unit tests for the parser functionality.
-
-use jorm_rs::parser::{parse_dag_file, validate_dag, Dag, Dependency, Task, TaskConfig};
-use std::collections::HashMap;
-use std::fs;
-use tempfile::TempDir;
+use jorm::parser::dag_parser::DagParser;
+use jorm::core::task::TaskType;
 
 #[cfg(test)]
 mod parser_tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_parse_txt_file() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("simple.txt");
+    async fn test_parse_shell_task() {
+        let content = r#"
+task simple_shell {
+    type: shell
+    command: "echo hello world"
+    working_dir: "/tmp"
+}
+"#;
 
-        let content = r#"dag: simple
-schedule: every 10 minutes
-
-tasks:
-- extract_sales
-- transform_data
-- load_data
-
-dependencies:
-- transform_data after extract_sales
-- load_data after transform_data"#;
-
-        fs::write(&file_path, content).unwrap();
-
-        let dag = parse_dag_file(file_path.to_str().unwrap()).await.unwrap();
-        assert_eq!(dag.name, "simple");
-        assert_eq!(dag.schedule, Some("every 10 minutes".to_string()));
-        assert_eq!(dag.tasks.len(), 3);
-        assert!(dag.tasks.contains_key("extract_sales"));
-        assert!(dag.tasks.contains_key("transform_data"));
-        assert!(dag.tasks.contains_key("load_data"));
-        assert_eq!(dag.dependencies.len(), 2);
+        let parser = DagParser::new();
+        let result = parser.parse_content(content);
+        
+        assert!(result.is_ok());
+        let dag = result.unwrap();
+        assert_eq!(dag.tasks.len(), 1);
+        
+        let task = dag.tasks.get("simple_shell").unwrap();
+        match &task.task_type {
+            TaskType::Shell { command, working_dir } => {
+                assert_eq!(command, "echo hello world");
+                assert_eq!(working_dir.as_ref().unwrap(), "/tmp");
+            }
+            _ => panic!("Expected shell task type"),
+        }
     }
 
     #[tokio::test]
-    async fn test_parse_yaml_file() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("simple.yaml");
+    async fn test_parse_http_task() {
+        let content = r#"
+task http_request {
+    type: http
+    method: "POST"
+    url: "https://api.example.com/webhook"
+    headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer token"
+    }
+    body: '{"message": "hello"}'
+}
+"#;
 
-        let content = r#"name: simple_yaml
-schedule: "0 0 * * *"
+        let parser = DagParser::new();
+        let result = parser.parse_content(content);
+        
+        assert!(result.is_ok());
+        let dag = result.unwrap();
+        
+        let task = dag.tasks.get("http_request").unwrap();
+        match &task.task_type {
+            TaskType::Http { method, url, headers, body } => {
+                assert_eq!(method, "POST");
+                assert_eq!(url, "https://api.example.com/webhook");
+                assert!(headers.is_some());
+                assert!(body.is_some());
+                
+                let headers = headers.as_ref().unwrap();
+                assert_eq!(headers.get("Content-Type").unwrap(), "application/json");
+                assert_eq!(headers.get("Authorization").unwrap(), "Bearer token");
+                assert_eq!(body.as_ref().unwrap(), r#"{"message": "hello"}"#);
+            }
+            _ => panic!("Expected HTTP task type"),
+        }
+    }
 
-tasks:
-  extract_sales:
-    type: shell
-    command: "echo 'extracting sales data'"
-  transform_data:
+    #[tokio::test]
+    async fn test_parse_python_task() {
+        let content = r#"
+task python_script {
     type: python
-    script: "print('transforming data')"
-  load_data:
-    type: shell
-    command: "echo 'loading data'"
+    script: "process_data.py"
+    args: ["--input", "data.csv", "--output", "result.json"]
+    working_dir: "./scripts"
+}
+"#;
 
-dependencies:
-  - task: transform_data
-    depends_on: extract_sales
-  - task: load_data
-    depends_on: transform_data"#;
+        let parser = DagParser::new();
+        let result = parser.parse_content(content);
+        
+        assert!(result.is_ok());
+        let dag = result.unwrap();
+        
+        let task = dag.tasks.get("python_script").unwrap();
+        match &task.task_type {
+            TaskType::Python { script, args, working_dir } => {
+                assert_eq!(script, "process_data.py");
+                assert!(args.is_some());
+                assert_eq!(working_dir.as_ref().unwrap(), "./scripts");
+                
+                let args = args.as_ref().unwrap();
+                assert_eq!(args.len(), 4);
+                assert_eq!(args[0], "--input");
+                assert_eq!(args[1], "data.csv");
+            }
+            _ => panic!("Expected Python task type"),
+        }
+    }
 
-        fs::write(&file_path, content).unwrap();
+    #[tokio::test]
+    async fn test_parse_file_operations() {
+        let content = r#"
+task copy_file {
+    type: file_copy
+    source: "source.txt"
+    destination: "dest.txt"
+}
 
-        let dag = parse_dag_file(file_path.to_str().unwrap()).await.unwrap();
-        assert_eq!(dag.name, "simple_yaml");
-        assert_eq!(dag.schedule, Some("0 0 * * *".to_string()));
+task move_file {
+    type: file_move
+    source: "temp.txt"
+    destination: "final.txt"
+}
+
+task delete_file {
+    type: file_delete
+    path: "unwanted.txt"
+}
+"#;
+
+        let parser = DagParser::new();
+        let result = parser.parse_content(content);
+        
+        assert!(result.is_ok());
+        let dag = result.unwrap();
         assert_eq!(dag.tasks.len(), 3);
-        assert!(dag.tasks.contains_key("extract_sales"));
-        assert!(dag.tasks.contains_key("transform_data"));
-        assert!(dag.tasks.contains_key("load_data"));
-        assert_eq!(dag.dependencies.len(), 2);
+        
+        // Test file copy
+        let copy_task = dag.tasks.get("copy_file").unwrap();
+        match &copy_task.task_type {
+            TaskType::FileCopy { source, destination } => {
+                assert_eq!(source, "source.txt");
+                assert_eq!(destination, "dest.txt");
+            }
+            _ => panic!("Expected FileCopy task type"),
+        }
+        
+        // Test file move
+        let move_task = dag.tasks.get("move_file").unwrap();
+        match &move_task.task_type {
+            TaskType::FileMove { source, destination } => {
+                assert_eq!(source, "temp.txt");
+                assert_eq!(destination, "final.txt");
+            }
+            _ => panic!("Expected FileMove task type"),
+        }
+        
+        // Test file delete
+        let delete_task = dag.tasks.get("delete_file").unwrap();
+        match &delete_task.task_type {
+            TaskType::FileDelete { path } => {
+                assert_eq!(path, "unwanted.txt");
+            }
+            _ => panic!("Expected FileDelete task type"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parse_dependencies() {
+        let content = r#"
+task task_a {
+    type: shell
+    command: "echo a"
+}
+
+task task_b {
+    type: shell
+    command: "echo b"
+    depends_on: [task_a]
+}
+
+task task_c {
+    type: shell
+    command: "echo c"
+    depends_on: [task_a, task_b]
+}
+"#;
+
+        let parser = DagParser::new();
+        let result = parser.parse_content(content);
+        
+        assert!(result.is_ok());
+        let dag = result.unwrap();
+        assert_eq!(dag.tasks.len(), 3);
+        
+        // Check dependencies
+        assert!(dag.dependencies.contains_key("task_b"));
+        assert!(dag.dependencies.contains_key("task_c"));
+        
+        let task_b_deps = dag.dependencies.get("task_b").unwrap();
+        assert_eq!(task_b_deps, &vec!["task_a".to_string()]);
+        
+        let task_c_deps = dag.dependencies.get("task_c").unwrap();
+        assert_eq!(task_c_deps.len(), 2);
+        assert!(task_c_deps.contains(&"task_a".to_string()));
+        assert!(task_c_deps.contains(&"task_b".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_comments_and_whitespace() {
+        let content = r#"
+# This is a comment
+# Another comment
+
+task test_task {
+    # Comment inside task
+    type: shell
+    command: "echo test"
+    # More comments
+}
+
+# Final comment
+"#;
+
+        let parser = DagParser::new();
+        let result = parser.parse_content(content);
+        
+        assert!(result.is_ok());
+        let dag = result.unwrap();
+        assert_eq!(dag.tasks.len(), 1);
+        assert!(dag.tasks.contains_key("test_task"));
+    }
+
+    #[tokio::test]
+    async fn test_parse_syntax_errors() {
+        // Missing task type
+        let content1 = r#"
+task invalid_task {
+    command: "echo test"
+}
+"#;
+        let parser = DagParser::new();
+        let result1 = parser.parse_content(content1);
+        assert!(result1.is_err());
+
+        // Invalid task type
+        let content2 = r#"
+task invalid_task {
+    type: invalid_type
+    command: "echo test"
+}
+"#;
+        let result2 = parser.parse_content(content2);
+        assert!(result2.is_err());
+
+        // Missing required parameter
+        let content3 = r#"
+task invalid_task {
+    type: shell
+    # Missing command
+}
+"#;
+        let result3 = parser.parse_content(content3);
+        assert!(result3.is_err());
     }
 
     #[tokio::test]
     async fn test_parse_complex_dag() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("complex.txt");
+        let content = r#"
+# Complex DAG with multiple task types and dependencies
+task setup {
+    type: shell
+    command: "mkdir -p /tmp/test"
+}
 
-        let content = r#"dag: complex_workflow
-schedule: every 1 hour
+task download_data {
+    type: http
+    method: "GET"
+    url: "https://api.example.com/data"
+    depends_on: [setup]
+}
 
-tasks:
-- task_a
-- task_b
-- task_c
-- task_d
+task process_data {
+    type: python
+    script: "process.py"
+    args: ["--input", "/tmp/data.json"]
+    working_dir: "/tmp/test"
+    depends_on: [download_data]
+}
 
-dependencies:
-- task_b after task_a
-- task_c after task_a
-- task_d after task_b
-- task_d after task_c"#;
+task build_project {
+    type: rust
+    command: "cargo build --release"
+    working_dir: "./project"
+    depends_on: [process_data]
+}
 
-        fs::write(&file_path, content).unwrap();
+task cleanup {
+    type: file_delete
+    path: "/tmp/test"
+    depends_on: [build_project]
+}
+"#;
 
-        let dag = parse_dag_file(file_path.to_str().unwrap()).await.unwrap();
-        assert_eq!(dag.name, "complex_workflow");
-        assert_eq!(dag.schedule, Some("every 1 hour".to_string()));
-        assert_eq!(dag.tasks.len(), 4);
+        let parser = DagParser::new();
+        let result = parser.parse_content(content);
+        
+        assert!(result.is_ok());
+        let dag = result.unwrap();
+        assert_eq!(dag.tasks.len(), 5);
+        
+        // Validate the DAG structure
+        assert!(dag.validate().is_ok());
+        
+        // Check that all dependencies are properly set
         assert_eq!(dag.dependencies.len(), 4);
-    }
-
-    #[test]
-    fn test_dag_validation_success() {
-        let dag = Dag {
-            name: "test_dag".to_string(),
-            schedule: None,
-            tasks: {
-                let mut tasks = HashMap::new();
-                tasks.insert(
-                    "task1".to_string(),
-                    Task {
-                        name: "task1".to_string(),
-                        description: Some("Test task 1".to_string()),
-                        config: TaskConfig {
-                            task_type: Some("shell".to_string()),
-                            command: Some("echo 'Hello'".to_string()),
-                            ..Default::default()
-                        },
-                    },
-                );
-                tasks
-            },
-            dependencies: vec![],
-        };
-
-        let errors = validate_dag(&dag).unwrap();
-        assert!(errors.is_empty());
-    }
-
-    #[test]
-    fn test_dag_validation_with_dependencies() {
-        let dag = Dag {
-            name: "test_dag_with_deps".to_string(),
-            schedule: None,
-            tasks: {
-                let mut tasks = HashMap::new();
-                tasks.insert(
-                    "task_a".to_string(),
-                    Task {
-                        name: "task_a".to_string(),
-                        description: Some("Task A".to_string()),
-                        config: TaskConfig {
-                            task_type: Some("shell".to_string()),
-                            command: Some("echo 'A'".to_string()),
-                            ..Default::default()
-                        },
-                    },
-                );
-                tasks.insert(
-                    "task_b".to_string(),
-                    Task {
-                        name: "task_b".to_string(),
-                        description: Some("Task B".to_string()),
-                        config: TaskConfig {
-                            task_type: Some("shell".to_string()),
-                            command: Some("echo 'B'".to_string()),
-                            ..Default::default()
-                        },
-                    },
-                );
-                tasks
-            },
-            dependencies: vec![Dependency {
-                task: "task_b".to_string(),
-                depends_on: "task_a".to_string(),
-            }],
-        };
-
-        let errors = validate_dag(&dag).unwrap();
-        assert!(errors.is_empty());
-    }
-
-    #[test]
-    fn test_dag_validation_missing_task() {
-        let dag = Dag {
-            name: "invalid_dag".to_string(),
-            schedule: None,
-            tasks: {
-                let mut tasks = HashMap::new();
-                tasks.insert(
-                    "task1".to_string(),
-                    Task {
-                        name: "task1".to_string(),
-                        description: Some("Task 1".to_string()),
-                        config: TaskConfig {
-                            task_type: Some("shell".to_string()),
-                            command: Some("echo 'Hello'".to_string()),
-                            ..Default::default()
-                        },
-                    },
-                );
-                tasks
-            },
-            dependencies: vec![Dependency {
-                task: "task1".to_string(),
-                depends_on: "nonexistent_task".to_string(),
-            }],
-        };
-
-        let errors = validate_dag(&dag).unwrap();
-        assert!(!errors.is_empty());
-    }
-
-    #[test]
-    fn test_dag_validation_empty_name() {
-        let dag = Dag {
-            name: "".to_string(),
-            schedule: None,
-            tasks: HashMap::new(),
-            dependencies: vec![],
-        };
-
-        let errors = validate_dag(&dag).unwrap();
-        assert!(!errors.is_empty());
-    }
-
-    #[test]
-    fn test_task_config_creation() {
-        let shell_config = TaskConfig {
-            task_type: Some("shell".to_string()),
-            command: Some("echo 'hello'".to_string()),
-            ..Default::default()
-        };
-
-        let python_config = TaskConfig {
-            task_type: Some("python".to_string()),
-            script: Some("print('hello')".to_string()),
-            ..Default::default()
-        };
-
-        let http_config = TaskConfig {
-            task_type: Some("http".to_string()),
-            method: Some("GET".to_string()),
-            url: Some("https://api.example.com".to_string()),
-            ..Default::default()
-        };
-
-        let file_config = TaskConfig {
-            task_type: Some("file".to_string()),
-            script: Some("Hello, World!".to_string()),
-            destination: Some("output.txt".to_string()),
-            ..Default::default()
-        };
-
-        // Test that configs are created successfully
-        assert!(matches!(shell_config.task_type, Some(ref t) if t == "shell"));
-        assert!(matches!(python_config.task_type, Some(ref t) if t == "python"));
-        assert!(matches!(http_config.task_type, Some(ref t) if t == "http"));
-        assert!(matches!(file_config.task_type, Some(ref t) if t == "file"));
-    }
-
-    #[tokio::test]
-    async fn test_parse_nonexistent_file() {
-        let result = parse_dag_file("/nonexistent/file.txt").await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_parse_invalid_file() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("invalid.txt");
-
-        let content = "this is not a valid DAG file";
-        fs::write(&file_path, content).unwrap();
-
-        let result = parse_dag_file(file_path.to_str().unwrap()).await;
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_dependency_creation() {
-        let dep = Dependency {
-            task: "task2".to_string(),
-            depends_on: "task1".to_string(),
-        };
-
-        assert_eq!(dep.task, "task2");
-        assert_eq!(dep.depends_on, "task1");
-    }
-
-    #[test]
-    fn test_dag_creation() {
-        let dag = Dag {
-            name: "test_dag".to_string(),
-            schedule: Some("every 1 minute".to_string()),
-            tasks: {
-                let mut tasks = HashMap::new();
-                tasks.insert(
-                    "task1".to_string(),
-                    Task {
-                        name: "task1".to_string(),
-                        description: Some("Task 1".to_string()),
-                        config: TaskConfig {
-                            task_type: Some("shell".to_string()),
-                            command: Some("echo 'Hello'".to_string()),
-                            ..Default::default()
-                        },
-                    },
-                );
-                tasks
-            },
-            dependencies: vec![],
-        };
-
-        assert_eq!(dag.name, "test_dag");
-        assert_eq!(dag.schedule, Some("every 1 minute".to_string()));
-        assert_eq!(dag.tasks.len(), 1);
-        assert_eq!(dag.dependencies.len(), 0);
+        assert!(dag.dependencies.get("download_data").unwrap().contains(&"setup".to_string()));
+        assert!(dag.dependencies.get("process_data").unwrap().contains(&"download_data".to_string()));
+        assert!(dag.dependencies.get("build_project").unwrap().contains(&"process_data".to_string()));
+        assert!(dag.dependencies.get("cleanup").unwrap().contains(&"build_project".to_string()));
     }
 }

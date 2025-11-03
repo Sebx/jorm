@@ -1,364 +1,308 @@
-//! Comprehensive Executor Unit Tests
-//!
-#![allow(unused_variables, dead_code)]
-#![allow(clippy::assertions_on_constants, clippy::field_reassign_with_default)]
-//! Comprehensive Executor Unit Tests
-//! 
-//! This module contains all unit tests for the executor infrastructure,
-//! consolidating previously scattered test files into a single, well-organized module.
-
-use jorm_rs::executor::{ExecutionStatus, ExecutorConfig, NativeExecutor};
-use jorm_rs::parser::{Dag, Dependency, Task as DagTask, TaskConfig as DagTaskConfig};
+use jorm::executor::TaskExecutor;
+use jorm::core::{dag::Dag, task::{Task, TaskType}};
 use std::collections::HashMap;
-use tokio::time::Duration;
 
-/// Test helper to create a simple test DAG
-fn create_test_dag() -> Dag {
-    let mut tasks = HashMap::new();
-    tasks.insert(
-        "task1".to_string(),
-        DagTask {
-            name: "task1".to_string(),
-            description: Some("Test task 1".to_string()),
-            config: DagTaskConfig {
-                task_type: Some("shell".to_string()),
-                command: Some("echo 'Hello from task1'".to_string()),
-                script: None,
-                destination: None,
-                ..Default::default()
+#[cfg(test)]
+mod executor_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_resolve_execution_order_linear() {
+        let executor = TaskExecutor::new();
+        let mut dag = Dag::new("linear_dag".to_string());
+        
+        // Create linear dependency chain: A -> B -> C
+        let task_a = Task::new(
+            "task_a".to_string(),
+            TaskType::Shell {
+                command: "echo 'task a'".to_string(),
+                working_dir: None,
             },
-        },
-    );
-
-    tasks.insert(
-        "task2".to_string(),
-        DagTask {
-            name: "task2".to_string(),
-            description: Some("Test task 2".to_string()),
-            config: DagTaskConfig {
-                task_type: Some("shell".to_string()),
-                command: Some("echo 'Hello from task2'".to_string()),
-                script: None,
-                destination: None,
-                ..Default::default()
+        );
+        
+        let task_b = Task::new(
+            "task_b".to_string(),
+            TaskType::Shell {
+                command: "echo 'task b'".to_string(),
+                working_dir: None,
             },
-        },
-    );
-
-    Dag {
-        name: "test_dag".to_string(),
-        schedule: None,
-        tasks,
-        dependencies: vec![Dependency {
-            task: "task2".to_string(),
-            depends_on: "task1".to_string(),
-        }],
-    }
-}
-
-/// Test helper to create a Python test DAG
-fn create_python_test_dag() -> Dag {
-    let mut tasks = HashMap::new();
-    tasks.insert(
-        "python_task".to_string(),
-        DagTask {
-            name: "python_task".to_string(),
-            description: Some("Python test task".to_string()),
-            config: DagTaskConfig {
-                task_type: Some("python".to_string()),
-                command: None,
-                script: Some("print('Hello from Python!')".to_string()),
-                destination: None,
-                ..Default::default()
+        );
+        
+        let task_c = Task::new(
+            "task_c".to_string(),
+            TaskType::Shell {
+                command: "echo 'task c'".to_string(),
+                working_dir: None,
             },
-        },
-    );
-
-    Dag {
-        name: "python_test_dag".to_string(),
-        schedule: None,
-        tasks,
-        dependencies: vec![],
-    }
-}
-
-#[cfg(test)]
-mod executor_config_tests {
-    use super::*;
-
-    #[test]
-    fn test_executor_config_creation() {
-        let config = ExecutorConfig::default();
-        assert!(config.max_concurrent_tasks > 0);
-        assert!(config.default_timeout > Duration::ZERO);
-        assert!(config.retry_config.max_attempts > 0);
-    }
-
-    #[test]
-    fn test_executor_config_validation() {
-        let config = ExecutorConfig::default();
-        assert!(config.validate().is_ok());
-
-        let invalid_config = ExecutorConfig {
-            max_concurrent_tasks: 0,
-            ..Default::default()
-        };
-        assert!(invalid_config.validate().is_err());
-    }
-
-    #[test]
-    fn test_executor_config_customization() {
-        let mut config = ExecutorConfig::default();
-        config.max_concurrent_tasks = 8;
-        config.default_timeout = Duration::from_secs(300);
-
-        assert_eq!(config.max_concurrent_tasks, 8);
-        assert_eq!(config.default_timeout, Duration::from_secs(300));
-        assert!(config.validate().is_ok());
-    }
-}
-
-#[cfg(test)]
-mod executor_creation_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_executor_creation() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        // Should create successfully
-        assert!(true);
+        );
+        
+        dag.add_task(task_a);
+        dag.add_task(task_b);
+        dag.add_task(task_c);
+        
+        dag.add_dependency("task_b".to_string(), vec!["task_a".to_string()]);
+        dag.add_dependency("task_c".to_string(), vec!["task_b".to_string()]);
+        
+        let execution_order = executor.resolve_execution_order(&dag).unwrap();
+        
+        assert_eq!(execution_order.len(), 3);
+        assert_eq!(execution_order[0], "task_a");
+        assert_eq!(execution_order[1], "task_b");
+        assert_eq!(execution_order[2], "task_c");
     }
 
     #[tokio::test]
-    async fn test_executor_with_custom_config() {
-        let mut config = ExecutorConfig::default();
-        config.max_concurrent_tasks = 4;
-        config.default_timeout = Duration::from_secs(60);
-
-        let executor = NativeExecutor::new(config);
-
-        // Should accept custom configuration
-        assert!(true);
+    async fn test_resolve_execution_order_diamond() {
+        let executor = TaskExecutor::new();
+        let mut dag = Dag::new("diamond_dag".to_string());
+        
+        // Create diamond dependency: root -> (left, right) -> final
+        let root = Task::new(
+            "root".to_string(),
+            TaskType::Shell {
+                command: "echo 'root'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let left = Task::new(
+            "left".to_string(),
+            TaskType::Shell {
+                command: "echo 'left'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let right = Task::new(
+            "right".to_string(),
+            TaskType::Shell {
+                command: "echo 'right'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let final_task = Task::new(
+            "final".to_string(),
+            TaskType::Shell {
+                command: "echo 'final'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        dag.add_task(root);
+        dag.add_task(left);
+        dag.add_task(right);
+        dag.add_task(final_task);
+        
+        dag.add_dependency("left".to_string(), vec!["root".to_string()]);
+        dag.add_dependency("right".to_string(), vec!["root".to_string()]);
+        dag.add_dependency("final".to_string(), vec!["left".to_string(), "right".to_string()]);
+        
+        let execution_order = executor.resolve_execution_order(&dag).unwrap();
+        
+        assert_eq!(execution_order.len(), 4);
+        assert_eq!(execution_order[0], "root");
+        assert_eq!(execution_order[3], "final");
+        
+        // left and right can be in any order in the middle
+        let middle_tasks: std::collections::HashSet<_> = execution_order[1..3].iter().collect();
+        assert!(middle_tasks.contains(&&"left".to_string()));
+        assert!(middle_tasks.contains(&&"right".to_string()));
     }
-}
-
-#[cfg(test)]
-mod task_execution_tests {
-    use super::*;
 
     #[tokio::test]
-    async fn test_simple_shell_task_execution() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        let dag = create_test_dag();
-
-        // Execute the DAG
-        let result = executor.execute_dag(&dag).await;
-
-        // Should execute successfully
-        assert!(result.is_ok());
-        let execution_result = result.unwrap();
-        assert_eq!(execution_result.status, ExecutionStatus::Success);
-        assert_eq!(execution_result.task_results.len(), 2);
+    async fn test_resolve_execution_order_independent() {
+        let executor = TaskExecutor::new();
+        let mut dag = Dag::new("independent_dag".to_string());
+        
+        // Create independent tasks
+        let task_a = Task::new(
+            "task_a".to_string(),
+            TaskType::Shell {
+                command: "echo 'task a'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let task_b = Task::new(
+            "task_b".to_string(),
+            TaskType::Shell {
+                command: "echo 'task b'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let task_c = Task::new(
+            "task_c".to_string(),
+            TaskType::Shell {
+                command: "echo 'task c'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        dag.add_task(task_a);
+        dag.add_task(task_b);
+        dag.add_task(task_c);
+        
+        let execution_order = executor.resolve_execution_order(&dag).unwrap();
+        
+        assert_eq!(execution_order.len(), 3);
+        // All tasks should be included, order doesn't matter for independent tasks
+        let task_set: std::collections::HashSet<_> = execution_order.iter().collect();
+        assert!(task_set.contains(&&"task_a".to_string()));
+        assert!(task_set.contains(&&"task_b".to_string()));
+        assert!(task_set.contains(&&"task_c".to_string()));
     }
 
     #[tokio::test]
-    async fn test_python_task_execution() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        let dag = create_python_test_dag();
-
-        // Execute the DAG
-        let result = executor.execute_dag(&dag).await;
-
-        // Should execute (may fail if Python not installed, which is expected)
-        assert!(result.is_ok());
-        let execution_result = result.unwrap();
-        // Python execution may fail if Python is not installed, which is expected
-        assert!(matches!(
-            execution_result.status,
-            ExecutionStatus::Success | ExecutionStatus::Failed
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_task_dependency_resolution() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        let dag = create_test_dag();
-
-        // Execute the DAG
-        let result = executor.execute_dag(&dag).await;
-
-        // Should execute successfully with proper dependency resolution
-        assert!(result.is_ok());
-        let execution_result = result.unwrap();
-        assert_eq!(execution_result.status, ExecutionStatus::Success);
-
-        // Verify task execution order (task1 should execute before task2)
-        let task1_result = execution_result.task_results.get("task1");
-        let task2_result = execution_result.task_results.get("task2");
-
-        assert!(task1_result.is_some());
-        assert!(task2_result.is_some());
-    }
-}
-
-#[cfg(test)]
-mod error_handling_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_invalid_task_type() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        // Create a DAG with invalid task type
-        let mut tasks = HashMap::new();
-        tasks.insert(
-            "invalid_task".to_string(),
-            DagTask {
-                name: "invalid_task".to_string(),
-                description: Some("Invalid task".to_string()),
-                config: DagTaskConfig {
-                    task_type: Some("invalid_type".to_string()),
-                    command: Some("echo 'test'".to_string()),
-                    script: None,
-                    destination: None,
-                    ..Default::default()
+    async fn test_resolve_execution_order_complex() {
+        let executor = TaskExecutor::new();
+        let mut dag = Dag::new("complex_dag".to_string());
+        
+        // Create complex dependency graph
+        let tasks = vec![
+            ("setup", vec![]),
+            ("download_a", vec!["setup"]),
+            ("download_b", vec!["setup"]),
+            ("process_a", vec!["download_a"]),
+            ("process_b", vec!["download_b"]),
+            ("merge", vec!["process_a", "process_b"]),
+            ("cleanup", vec!["merge"]),
+        ];
+        
+        for (name, _) in &tasks {
+            let task = Task::new(
+                name.to_string(),
+                TaskType::Shell {
+                    command: format!("echo '{}'", name),
+                    working_dir: None,
                 },
-            },
-        );
-
-        let dag = Dag {
-            name: "invalid_dag".to_string(),
-            schedule: None,
-            tasks,
-            dependencies: vec![],
-        };
-
-        // Execute the DAG
-        let result = executor.execute_dag(&dag).await;
-
-        // Should fail due to invalid task type
-        assert!(result.is_ok());
-        let execution_result = result.unwrap();
-        assert_eq!(execution_result.status, ExecutionStatus::Failed);
-    }
-
-    #[tokio::test]
-    async fn test_failing_task() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        // Create a DAG with a failing task
-        let mut tasks = HashMap::new();
-        tasks.insert(
-            "failing_task".to_string(),
-            DagTask {
-                name: "failing_task".to_string(),
-                description: Some("Failing task".to_string()),
-                config: DagTaskConfig {
-                    task_type: Some("shell".to_string()),
-                    command: Some("exit 1".to_string()),
-                    script: None,
-                    destination: None,
-                    ..Default::default()
-                },
-            },
-        );
-
-        let dag = Dag {
-            name: "failing_dag".to_string(),
-            schedule: None,
-            tasks,
-            dependencies: vec![],
-        };
-
-        // Execute the DAG
-        let result = executor.execute_dag(&dag).await;
-
-        // Should fail due to failing task
-        assert!(result.is_ok());
-        let execution_result = result.unwrap();
-        assert_eq!(execution_result.status, ExecutionStatus::Failed);
-    }
-}
-
-#[cfg(test)]
-mod performance_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_execution_performance() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        let dag = create_test_dag();
-
-        let start_time = std::time::Instant::now();
-        let result = executor.execute_dag(&dag).await;
-        let duration = start_time.elapsed();
-
-        // Should execute within reasonable time
-        assert!(result.is_ok());
-        assert!(
-            duration.as_secs() < 10,
-            "Execution should complete within 10 seconds"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_concurrent_execution() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
-
-        let dag = create_test_dag();
-
-        // Execute multiple DAGs concurrently
-        let handles: Vec<_> = (0..3)
-            .map(|_| {
-                let dag = dag.clone();
-                tokio::spawn(async move {
-                    let executor = NativeExecutor::new(ExecutorConfig::default());
-                    executor.execute_dag(&dag).await
-                })
-            })
-            .collect();
-
-        // Wait for all executions to complete
-        for handle in handles {
-            let result = handle.await.unwrap();
-            assert!(result.is_ok());
+            );
+            dag.add_task(task);
         }
+        
+        for (name, deps) in &tasks {
+            if !deps.is_empty() {
+                dag.add_dependency(
+                    name.to_string(),
+                    deps.iter().map(|s| s.to_string()).collect(),
+                );
+            }
+        }
+        
+        let execution_order = executor.resolve_execution_order(&dag).unwrap();
+        
+        assert_eq!(execution_order.len(), 7);
+        
+        // Verify ordering constraints
+        let get_index = |task: &str| execution_order.iter().position(|t| t == task).unwrap();
+        
+        assert!(get_index("setup") < get_index("download_a"));
+        assert!(get_index("setup") < get_index("download_b"));
+        assert!(get_index("download_a") < get_index("process_a"));
+        assert!(get_index("download_b") < get_index("process_b"));
+        assert!(get_index("process_a") < get_index("merge"));
+        assert!(get_index("process_b") < get_index("merge"));
+        assert!(get_index("merge") < get_index("cleanup"));
     }
-}
-
-#[cfg(test)]
-mod metrics_tests {
-    use super::*;
 
     #[tokio::test]
-    async fn test_execution_metrics() {
-        let config = ExecutorConfig::default();
-        let executor = NativeExecutor::new(config);
+    async fn test_resolve_execution_order_empty_dag() {
+        let executor = TaskExecutor::new();
+        let dag = Dag::new("empty_dag".to_string());
+        
+        let execution_order = executor.resolve_execution_order(&dag).unwrap();
+        assert!(execution_order.is_empty());
+    }
 
-        let dag = create_test_dag();
+    #[tokio::test]
+    async fn test_resolve_execution_order_single_task() {
+        let executor = TaskExecutor::new();
+        let mut dag = Dag::new("single_task_dag".to_string());
+        
+        let task = Task::new(
+            "only_task".to_string(),
+            TaskType::Shell {
+                command: "echo 'only task'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        dag.add_task(task);
+        
+        let execution_order = executor.resolve_execution_order(&dag).unwrap();
+        
+        assert_eq!(execution_order.len(), 1);
+        assert_eq!(execution_order[0], "only_task");
+    }
 
-        // Execute the DAG
-        let result = executor.execute_dag(&dag).await;
+    #[tokio::test]
+    async fn test_task_executor_creation() {
+        let executor = TaskExecutor::new();
+        // Just verify that the executor can be created
+        // More detailed testing would require actual task execution
+        assert!(true); // Placeholder assertion
+    }
 
-        // Should collect metrics
-        assert!(result.is_ok());
-        let execution_result = result.unwrap();
-
-        // Verify metrics are collected
-        assert!(execution_result.metrics.total_tasks > 0);
-           // Removed absurd comparisons
+    #[tokio::test]
+    async fn test_multiple_dependency_resolution() {
+        let executor = TaskExecutor::new();
+        let mut dag = Dag::new("multi_dep_dag".to_string());
+        
+        // Create tasks where one task depends on multiple others
+        let task_a = Task::new(
+            "task_a".to_string(),
+            TaskType::Shell {
+                command: "echo 'task a'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let task_b = Task::new(
+            "task_b".to_string(),
+            TaskType::Shell {
+                command: "echo 'task b'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let task_c = Task::new(
+            "task_c".to_string(),
+            TaskType::Shell {
+                command: "echo 'task c'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        let task_d = Task::new(
+            "task_d".to_string(),
+            TaskType::Shell {
+                command: "echo 'task d'".to_string(),
+                working_dir: None,
+            },
+        );
+        
+        dag.add_task(task_a);
+        dag.add_task(task_b);
+        dag.add_task(task_c);
+        dag.add_task(task_d);
+        
+        // task_d depends on all others
+        dag.add_dependency("task_d".to_string(), vec![
+            "task_a".to_string(),
+            "task_b".to_string(),
+            "task_c".to_string(),
+        ]);
+        
+        let execution_order = executor.resolve_execution_order(&dag).unwrap();
+        
+        assert_eq!(execution_order.len(), 4);
+        assert_eq!(execution_order[3], "task_d"); // task_d should be last
+        
+        // First three can be in any order
+        let first_three: std::collections::HashSet<_> = execution_order[0..3].iter().collect();
+        assert!(first_three.contains(&&"task_a".to_string()));
+        assert!(first_three.contains(&&"task_b".to_string()));
+        assert!(first_three.contains(&&"task_c".to_string()));
     }
 }

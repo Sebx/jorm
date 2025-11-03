@@ -1,6 +1,6 @@
-# JORM Native Executor Documentation
+# JORM Documentation
 
-Welcome to the JORM Native Rust Executor documentation. This directory contains comprehensive guides and references for using the high-performance native executor.
+Welcome to the JORM documentation. This directory contains guides and references for using the lightweight DAG execution engine.
 
 ## Documentation Overview
 
@@ -8,78 +8,59 @@ Welcome to the JORM Native Rust Executor documentation. This directory contains 
 
 | Document | Description | Audience |
 |----------|-------------|----------|
-| [API Examples](api_examples.md) | Comprehensive code examples and usage patterns | Developers |
-| [Configuration Reference](configuration_reference.md) | Complete configuration options and settings | DevOps, Developers |
-| [Migration Guide](migration_guide.md) | Step-by-step migration from Python executor | DevOps, System Administrators |
+| [API Examples](api_examples.md) | Code examples and usage patterns | Developers |
 | [Troubleshooting Guide](troubleshooting_guide.md) | Common issues and solutions | All Users |
 
 ### 🚀 Quick Start
 
-New to JORM Native Executor? Start here:
+New to JORM? Start here:
 
-1. **Installation**: Follow the installation instructions in the [Migration Guide](migration_guide.md#step-2-environment-setup)
-2. **Basic Usage**: Check out [API Examples](api_examples.md#basic-executor-usage)
-3. **Configuration**: Set up your configuration using the [Configuration Reference](configuration_reference.md)
-4. **First DAG**: Create and run your first DAG with the native executor
+1. **Installation**: `cargo install jorm`
+2. **Basic Usage**: Check out [API Examples](api_examples.md#basic-usage)
+3. **First DAG**: Create and run your first DAG
 
 ### 🎯 Use Case Guides
 
 #### For Developers
-- [API Examples](api_examples.md) - Learn how to use the native executor programmatically
-- [Task Executor Examples](api_examples.md#task-executors) - Understand different task types
-- [Error Handling](api_examples.md#error-handling) - Implement robust error handling
-
-#### for DevOps Engineers
-- [Migration Guide](migration_guide.md) - Migrate from Python to native executor
-- [Configuration Reference](configuration_reference.md) - Optimize configuration for your environment
-- [Performance Tuning](migration_guide.md#performance-considerations) - Maximize performance
+- [API Examples](api_examples.md) - Learn how to use JORM programmatically
+- [Task Types](api_examples.md#task-types) - Understand different task types
+- [Error Handling](api_examples.md#error-handling) - Implement basic error handling
 
 #### For System Administrators
 - [Troubleshooting Guide](troubleshooting_guide.md) - Resolve common issues
-- [Resource Monitoring](configuration_reference.md#resourcelimits) - Monitor and manage resources
-- [State Management](configuration_reference.md#stateconfig) - Configure persistence and recovery
+- [HTTP Server](api_examples.md#http-server) - Set up webhook endpoints
+- [Scheduling](api_examples.md#scheduling) - Configure cron-based scheduling
 
 ## Key Features
 
-### 🏃‍♂️ Performance
-- **5-10x faster** execution compared to Python executor
-- **True parallelism** with concurrent task execution
-- **50-70% lower** memory usage
-- **Sub-100ms** startup time for most DAGs
+### 🚀 Core Functionality
+- **Simple DAG Execution**: Execute workflows with dependency resolution
+- **Multiple Task Types**: Shell, Python, Rust, HTTP, and file operations
+- **Natural Language Processing**: Generate DAGs from descriptions
+- **Lightweight Design**: Minimal dependencies and fast startup
 
-### 🔧 Advanced Features
-- **Resource Monitoring**: CPU and memory usage tracking with throttling
-- **State Persistence**: Execution recovery and checkpointing
-- **Retry Logic**: Configurable retry mechanisms with exponential backoff
-- **Metrics Collection**: Comprehensive performance and execution metrics
-
-### 🔄 Compatibility
-- **100% DAG Compatibility**: All existing DAG formats supported
-- **Task Type Support**: Shell, Python, HTTP, and file operations
-- **Configuration Migration**: Smooth transition from Python executor
-- **Fallback Support**: Option to fall back to Python engine when needed
+### 🔧 Additional Features
+- **HTTP Server**: Webhook endpoints for remote execution
+- **Basic Scheduling**: Cron-based scheduling with daemon mode
+- **Simple Syntax**: Easy-to-learn text-based DAG format
+- **Error Handling**: Clear error messages and basic retry logic
 
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                🦀 JORM Native Rust Executor                │
+│                    🦀 JORM DAG Engine                       │
 ├─────────────────────────────────────────────────────────────┤
-│  Frontend (CLI)            │  Parser (Native)               │
-│  ├─ Command processing     │  ├─ Multi-format support       │
-│  ├─ Argument validation    │  ├─ DAG validation             │
-│  └─ Output formatting      │  └─ Dependency analysis        │
+│  CLI Interface             │  HTTP Server    │  Scheduler   │
+│  ├─ Command processing     │  ├─ Webhooks    │  ├─ Cron     │
+│  ├─ Argument validation    │  ├─ Auth        │  ├─ Daemon   │
+│  └─ Output formatting      │  └─ Logging     │  └─ Jobs     │
 ├─────────────────────────────────────────────────────────────┤
-│  Executor (Native)                                          │
-│  ├─ Parallel task execution                                 │
-│  ├─ Task type handlers (shell, Python, HTTP, file)         │
-│  ├─ State management (SQLite)                               │
-│  ├─ Retry mechanisms with backoff                           │
-│  ├─ Resource management and monitoring                      │
-│  └─ Real-time progress tracking                             │
-├─────────────────────────────────────────────────────────────┤
-│  Fallback (Python) - Optional                               │
-│  └─ Legacy execution engine for compatibility               │
+│  Core Engine                                                │
+│  ├─ Natural Language Processor (Lightweight AI)            │
+│  ├─ DAG Parser (Text-based format)                         │
+│  ├─ Task Executor (Shell, Python, Rust, HTTP, File)       │
+│  └─ Dependency Resolution                                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -88,185 +69,201 @@ New to JORM Native Executor? Start here:
 ### Basic DAG Execution
 
 ```bash
-# Execute a DAG with the native executor
-jorm --native-executor my-workflow.txt
+# Execute a DAG from file
+jorm execute my-workflow.txt
 
-# Execute with custom configuration
-jorm --native-executor --config production.toml my-workflow.txt
+# Generate DAG from natural language
+jorm generate "Copy files and run tests"
 
-# Execute with resource monitoring
-JORM_ENABLE_RESOURCE_THROTTLING=true jorm --native-executor my-workflow.txt
+# Execute from natural language directly
+jorm execute-nl "Build project and deploy"
+
+# Start HTTP server
+jorm server --port 8080
+
+# Schedule a DAG
+jorm schedule my-workflow.txt "0 2 * * *"
 ```
 
 ### Simple DAG Example
 
 ```text
 # hello-world.txt
-DAG: hello_world_example
+task greeting {
+    type: shell
+    command: "echo 'Hello from JORM!'"
+}
 
-# Shell task
-greeting: shell echo "Hello from JORM Native Executor!"
+task calculation {
+    type: python
+    script: "calc.py"
+    args: ["2", "2"]
+    depends_on: [greeting]
+}
 
-# Python task
-calculation: python_script -c "print(f'2 + 2 = {2 + 2}')"
+task status_check {
+    type: http
+    method: "GET"
+    url: "https://httpbin.org/status/200"
+    depends_on: [greeting]
+}
 
-# HTTP task
-status_check: http GET https://httpbin.org/status/200
-
-# File operation
-log_result: file create results.txt
-  content: "Execution completed successfully"
-
-# Dependencies
-calculation after greeting
-status_check after greeting
-log_result after calculation, status_check
+task log_result {
+    type: file_copy
+    source: "input.txt"
+    destination: "results.txt"
+    depends_on: [calculation, status_check]
+}
 ```
 
-### Configuration Example
+## Natural Language Examples
 
-```toml
-# jorm.toml
-[executor]
-max_concurrent_tasks = 8
-default_timeout = "10m"
-enable_state_persistence = true
-enable_resource_throttling = true
+### Generate DAGs from Descriptions
 
-[executor.resource_limits]
-max_cpu_percent = 80.0
-max_memory_percent = 70.0
+```bash
+# Simple workflow
+jorm generate "Copy config files, build project, run tests"
 
-[state]
-database_url = "sqlite:jorm_state.db"
-enable_checkpoints = true
-checkpoint_interval = "30s"
+# Data processing pipeline
+jorm generate "Download CSV data, process with Python, backup results"
+
+# Deployment workflow
+jorm generate "Build Docker image, push to registry, deploy to staging"
 ```
 
-## Performance Comparison
+### Generated DAG Preview
 
-| Metric | Python Executor | Native Executor | Improvement |
-|--------|----------------|-----------------|-------------|
-| Execution Speed | 100% (baseline) | 500-1000% | 5-10x faster |
-| Memory Usage | 100% (baseline) | 30-50% | 50-70% reduction |
-| Startup Time | ~2-5 seconds | ~50-100ms | 20-100x faster |
-| Concurrent Tasks | Limited by GIL | True parallelism | Unlimited |
-| Resource Monitoring | Manual | Built-in | Native support |
+```text
+# Generated from: "Copy config files, build project, run tests"
+task copy_config {
+    type: file_copy
+    source: "config.template"
+    destination: "config.prod"
+}
 
-## Migration Checklist
+task build_project {
+    type: rust
+    command: "cargo build --release"
+    depends_on: [copy_config]
+}
 
-- [ ] **Assessment**: Inventory current DAGs and dependencies
-- [ ] **Environment**: Set up testing environment with native executor
-- [ ] **Testing**: Test simple DAGs first, then complex ones
-- [ ] **Configuration**: Migrate configuration settings
-- [ ] **Validation**: Compare outputs and performance
-- [ ] **Deployment**: Gradual rollout to production
-- [ ] **Monitoring**: Set up monitoring and alerting
-- [ ] **Optimization**: Tune configuration based on actual usage
+task run_tests {
+    type: rust
+    command: "cargo test"
+    depends_on: [build_project]
+}
+```
 
 ## Common Use Cases
 
 ### CI/CD Pipelines
 ```text
-DAG: ci_cd_pipeline
+task checkout {
+    type: shell
+    command: "git clone https://github.com/user/repo.git"
+}
 
-checkout: shell git clone https://github.com/user/repo.git
-install: shell npm install
-test: shell npm test
-build: shell npm run build
-deploy: shell ./deploy.sh
+task install {
+    type: shell
+    command: "npm install"
+    working_dir: "./repo"
+    depends_on: [checkout]
+}
 
-install after checkout
-test after install
-build after test
-deploy after build
+task test {
+    type: shell
+    command: "npm test"
+    working_dir: "./repo"
+    depends_on: [install]
+}
+
+task build {
+    type: shell
+    command: "npm run build"
+    working_dir: "./repo"
+    depends_on: [test]
+}
+
+task deploy {
+    type: shell
+    command: "./deploy.sh"
+    working_dir: "./repo"
+    depends_on: [build]
+}
 ```
 
 ### Data Processing
 ```text
-DAG: data_processing
+task extract {
+    type: python
+    script: "extract_data.py"
+    args: ["--source", "database"]
+}
 
-extract: python_script extract_data.py --source database
-transform: python_script transform_data.py --input raw_data.csv
-validate: python_script validate_data.py --input processed_data.csv
-load: python_script load_data.py --target warehouse
+task transform {
+    type: python
+    script: "transform_data.py"
+    args: ["--input", "raw_data.csv"]
+    depends_on: [extract]
+}
 
-transform after extract
-validate after transform
-load after validate
-```
+task validate {
+    type: python
+    script: "validate_data.py"
+    args: ["--input", "processed_data.csv"]
+    depends_on: [transform]
+}
 
-### Infrastructure Management
-```text
-DAG: infrastructure_deployment
-
-provision: shell terraform apply -auto-approve
-configure: shell ansible-playbook -i inventory site.yml
-health_check: http GET https://api.service.com/health
-notify: shell curl -X POST -d "Deployment complete" webhook-url
-
-configure after provision
-health_check after configure
-notify after health_check
+task load {
+    type: python
+    script: "load_data.py"
+    args: ["--target", "warehouse"]
+    depends_on: [validate]
+}
 ```
 
 ## Best Practices
 
-### Performance Optimization
-1. **Concurrency Tuning**: Set `max_concurrent_tasks` based on your workload type
-2. **Resource Monitoring**: Enable resource throttling for production environments
-3. **State Management**: Use checkpoints for long-running workflows
-4. **Timeout Configuration**: Set appropriate timeouts for different task types
+### DAG Design
+1. **Simple Dependencies**: Keep dependency chains straightforward
+2. **Task Naming**: Use descriptive names for tasks
+3. **Working Directories**: Specify working directories for clarity
+4. **Error Messages**: Include meaningful error context
 
 ### Security
-1. **Environment Variables**: Don't inherit all system environment variables
-2. **File Permissions**: Secure configuration and state files
-3. **Network Security**: Use HTTPS for HTTP tasks
-4. **Secrets Management**: Use secure environment variable handling
+1. **File Permissions**: Secure DAG files and working directories
+2. **Network Security**: Use HTTPS for HTTP tasks
+3. **Authentication**: Use authentication tokens for HTTP server
+4. **Path Validation**: Validate file paths in file operations
 
 ### Reliability
-1. **Retry Configuration**: Configure retries for flaky tasks
-2. **Error Handling**: Implement comprehensive error handling
-3. **Monitoring**: Set up monitoring and alerting
-4. **Backup Strategy**: Regular backups of state database
+1. **Task Validation**: Validate DAG syntax before execution
+2. **Error Handling**: Handle task failures gracefully
+3. **Logging**: Monitor execution logs for issues
+4. **Testing**: Test DAGs in development before production
 
 ## Support and Community
 
 ### Getting Help
 - **Documentation**: Start with this documentation
-- **Community Forum**: [JORM Community](https://community.jorm.dev)
-- **GitHub Issues**: [Report bugs and request features](https://github.com/your-org/jorm/issues)
-- **Stack Overflow**: Tag questions with `jorm` and `rust`
+- **GitHub Issues**: [Report bugs and request features](https://github.com/jorm-project/jorm/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/jorm-project/jorm/discussions)
 
 ### Contributing
-- **Source Code**: [GitHub Repository](https://github.com/your-org/jorm)
+- **Source Code**: [GitHub Repository](https://github.com/jorm-project/jorm)
 - **Documentation**: Submit PRs to improve documentation
 - **Bug Reports**: Use the issue template for bug reports
 - **Feature Requests**: Discuss new features in GitHub Discussions
 
-### Enterprise Support
-For enterprise customers:
-- **Priority Support**: Dedicated support channels
-- **Professional Services**: Migration assistance and training
-- **Custom Development**: Feature development and customization
-- **SLA Guarantees**: Response time guarantees
-
 ## Changelog and Releases
 
 ### Latest Release: v0.1.0
-- ✨ Native Rust executor implementation
-- 🚀 5-10x performance improvement
-- 📊 Built-in resource monitoring
-- 💾 State persistence and recovery
-- 🔄 Enhanced retry mechanisms
-- 📈 Comprehensive metrics collection
-
-### Upcoming Features
-- 🔌 Plugin system for custom task types
-- 🌐 Distributed execution support
-- 📱 Web UI for monitoring and management
-- 🔍 Advanced debugging tools
-- 📊 Enhanced metrics and dashboards
+- ✨ Lightweight DAG execution engine
+- 🤖 Natural language processing for DAG generation
+- 🌐 HTTP server for webhook triggers
+- ⏰ Basic cron scheduling with daemon mode
+- 📝 Simple text-based DAG syntax
+- 🔧 Multiple task types (shell, Python, Rust, HTTP, file operations)
 
 ## License
 
