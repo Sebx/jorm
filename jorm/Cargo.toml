@@ -16,7 +16,9 @@ exclude = [
     "examples/",
     ".github/",
     ".kiro/",
-    "*.md"
+    "*.md",
+    "*_output.txt",
+    "test_*.txt"
 ]
 
 [dependencies]
