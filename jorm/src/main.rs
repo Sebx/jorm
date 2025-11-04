@@ -1,11 +1,12 @@
+#![allow(clippy::uninlined_format_args)]
+
 use clap::{Parser, Subcommand};
-use jorm::{JormEngine, Result, DagParser, TaskType};
-use jorm::server::http::HttpServer;
 use jorm::scheduler::{Daemon, Schedule};
+use jorm::server::http::HttpServer;
+use jorm::{DagParser, JormEngine, Result, TaskType};
 use std::path::PathBuf;
 use std::process;
 use std::sync::Arc;
-
 
 #[derive(Parser)]
 #[command(name = "jorm")]
@@ -116,7 +117,7 @@ enum DaemonAction {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-    
+
     let exit_code = match run_command(cli).await {
         Ok(code) => code,
         Err(e) => {
@@ -124,14 +125,17 @@ async fn main() {
             1
         }
     };
-    
+
     process::exit(exit_code);
 }
 
 async fn run_command(cli: Cli) -> Result<i32> {
     match cli.command {
         Commands::Execute { file } => execute_dag_file(file).await,
-        Commands::Generate { description, preview } => generate_dag(description, preview).await,
+        Commands::Generate {
+            description,
+            preview,
+        } => generate_dag(description, preview).await,
         Commands::Validate { file } => validate_dag_file(file).await,
         Commands::Server { port, auth_token } => start_http_server(port, auth_token).await,
         Commands::Daemon { action } => handle_daemon_action(action).await,
@@ -140,12 +144,12 @@ async fn run_command(cli: Cli) -> Result<i32> {
 
 async fn execute_dag_file(file: PathBuf) -> Result<i32> {
     println!("🚀 Executing DAG file: {}", file.display());
-    
+
     let engine = JormEngine::new().await?;
-    let file_path = file.to_str().ok_or_else(|| {
-        jorm::JormError::FileError("Invalid file path".to_string())
-    })?;
-    
+    let file_path = file
+        .to_str()
+        .ok_or_else(|| jorm::JormError::FileError("Invalid file path".to_string()))?;
+
     match engine.execute_from_file(file_path).await {
         Ok(result) => {
             if result.success {
@@ -155,8 +159,14 @@ async fn execute_dag_file(file: PathBuf) -> Result<i32> {
                     if task_result.success {
                         println!("  ✅ {}: {}", task_result.task_name, task_result.output);
                     } else {
-                        println!("  ❌ {}: {}", task_result.task_name, 
-                                task_result.error.as_ref().unwrap_or(&"Unknown error".to_string()));
+                        println!(
+                            "  ❌ {}: {}",
+                            task_result.task_name,
+                            task_result
+                                .error
+                                .as_ref()
+                                .unwrap_or(&"Unknown error".to_string())
+                        );
                     }
                 }
                 Ok(0)
@@ -167,8 +177,14 @@ async fn execute_dag_file(file: PathBuf) -> Result<i32> {
                     if task_result.success {
                         println!("  ✅ {}: {}", task_result.task_name, task_result.output);
                     } else {
-                        println!("  ❌ {}: {}", task_result.task_name, 
-                                task_result.error.as_ref().unwrap_or(&"Unknown error".to_string()));
+                        println!(
+                            "  ❌ {}: {}",
+                            task_result.task_name,
+                            task_result
+                                .error
+                                .as_ref()
+                                .unwrap_or(&"Unknown error".to_string())
+                        );
                     }
                 }
                 Ok(1)
@@ -184,9 +200,9 @@ async fn execute_dag_file(file: PathBuf) -> Result<i32> {
 async fn generate_dag(description: String, preview: bool) -> Result<i32> {
     println!("🤖 Generating DAG from natural language...");
     println!("📝 Description: {}", description);
-    
+
     let engine = JormEngine::new().await?;
-    
+
     if preview {
         match engine.generate_dag_from_nl(&description).await {
             Ok(dag_content) => {
@@ -212,8 +228,14 @@ async fn generate_dag(description: String, preview: bool) -> Result<i32> {
                         if task_result.success {
                             println!("  ✅ {}: {}", task_result.task_name, task_result.output);
                         } else {
-                            println!("  ❌ {}: {}", task_result.task_name, 
-                                    task_result.error.as_ref().unwrap_or(&"Unknown error".to_string()));
+                            println!(
+                                "  ❌ {}: {}",
+                                task_result.task_name,
+                                task_result
+                                    .error
+                                    .as_ref()
+                                    .unwrap_or(&"Unknown error".to_string())
+                            );
                         }
                     }
                     Ok(0)
@@ -224,8 +246,14 @@ async fn generate_dag(description: String, preview: bool) -> Result<i32> {
                         if task_result.success {
                             println!("  ✅ {}: {}", task_result.task_name, task_result.output);
                         } else {
-                            println!("  ❌ {}: {}", task_result.task_name, 
-                                    task_result.error.as_ref().unwrap_or(&"Unknown error".to_string()));
+                            println!(
+                                "  ❌ {}: {}",
+                                task_result.task_name,
+                                task_result
+                                    .error
+                                    .as_ref()
+                                    .unwrap_or(&"Unknown error".to_string())
+                            );
                         }
                     }
                     Ok(1)
@@ -241,12 +269,12 @@ async fn generate_dag(description: String, preview: bool) -> Result<i32> {
 
 async fn validate_dag_file(file: PathBuf) -> Result<i32> {
     println!("🔍 Validating DAG file: {}", file.display());
-    
+
     let parser = DagParser::new();
-    let file_path = file.to_str().ok_or_else(|| {
-        jorm::JormError::FileError("Invalid file path".to_string())
-    })?;
-    
+    let file_path = file
+        .to_str()
+        .ok_or_else(|| jorm::JormError::FileError("Invalid file path".to_string()))?;
+
     match parser.parse_file(file_path).await {
         Ok(dag) => {
             match dag.validate() {
@@ -256,7 +284,7 @@ async fn validate_dag_file(file: PathBuf) -> Result<i32> {
                     println!("  📝 DAG name: {}", dag.name);
                     println!("  🔢 Total tasks: {}", dag.tasks.len());
                     println!("  🔗 Dependencies: {}", dag.dependencies.len());
-                    
+
                     // Show task types summary
                     let mut task_types = std::collections::HashMap::new();
                     for task in dag.tasks.values() {
@@ -272,12 +300,12 @@ async fn validate_dag_file(file: PathBuf) -> Result<i32> {
                         };
                         *task_types.entry(task_type).or_insert(0) += 1;
                     }
-                    
+
                     println!("  📋 Task types:");
                     for (task_type, count) in task_types {
                         println!("    - {}: {}", task_type, count);
                     }
-                    
+
                     Ok(0)
                 }
                 Err(e) => {
@@ -295,14 +323,14 @@ async fn validate_dag_file(file: PathBuf) -> Result<i32> {
 
 async fn start_http_server(port: u16, auth_token: Option<String>) -> Result<i32> {
     println!("🌐 Starting HTTP server on port {}", port);
-    
+
     let engine = Arc::new(JormEngine::new().await?);
     let server = if let Some(token) = auth_token {
         HttpServer::with_auth_token(engine, port, token)
     } else {
         HttpServer::new(engine, port)
     };
-    
+
     match server.start().await {
         Ok(_) => {
             println!("✅ HTTP server started successfully");
@@ -317,12 +345,16 @@ async fn start_http_server(port: u16, auth_token: Option<String>) -> Result<i32>
 
 async fn handle_daemon_action(action: DaemonAction) -> Result<i32> {
     match action {
-        DaemonAction::Start { state_file, schedules, log_file } => {
+        DaemonAction::Start {
+            state_file,
+            schedules,
+            log_file,
+        } => {
             println!("🚀 Starting Jorm daemon...");
-            
+
             let engine = Arc::new(JormEngine::new().await?);
             let mut daemon = Daemon::new(engine, state_file, schedules, log_file);
-            
+
             match daemon.start().await {
                 Ok(_) => {
                     println!("✅ Daemon stopped gracefully");
@@ -336,10 +368,10 @@ async fn handle_daemon_action(action: DaemonAction) -> Result<i32> {
         }
         DaemonAction::Stop { state_file } => {
             println!("🛑 Stopping Jorm daemon...");
-            
+
             let engine = Arc::new(JormEngine::new().await?);
             let mut daemon = Daemon::new(engine, state_file, None, None);
-            
+
             match daemon.stop().await {
                 Ok(_) => {
                     println!("✅ Daemon stopped successfully");
@@ -354,13 +386,16 @@ async fn handle_daemon_action(action: DaemonAction) -> Result<i32> {
         DaemonAction::Status { state_file } => {
             let engine = Arc::new(JormEngine::new().await?);
             let daemon = Daemon::new(engine, state_file, None, None);
-            
+
             match daemon.status().await {
                 Ok(state) => {
                     if let Some(pid) = state.pid {
                         println!("✅ Daemon is running (PID: {})", pid);
                         if let Some(started_at) = state.started_at {
-                            println!("   Started at: {}", started_at.format("%Y-%m-%d %H:%M:%S UTC"));
+                            println!(
+                                "   Started at: {}",
+                                started_at.format("%Y-%m-%d %H:%M:%S UTC")
+                            );
                         }
                         if let Some(schedules_file) = state.schedules_file {
                             println!("   Schedules file: {}", schedules_file);
@@ -379,18 +414,23 @@ async fn handle_daemon_action(action: DaemonAction) -> Result<i32> {
                 }
             }
         }
-        DaemonAction::AddSchedule { id, cron, dag_file, state_file } => {
+        DaemonAction::AddSchedule {
+            id,
+            cron,
+            dag_file,
+            state_file,
+        } => {
             println!("📅 Adding schedule: {} -> {}", id, dag_file.display());
-            
-            let dag_file_str = dag_file.to_str().ok_or_else(|| {
-                jorm::JormError::FileError("Invalid DAG file path".to_string())
-            })?;
-            
+
+            let dag_file_str = dag_file
+                .to_str()
+                .ok_or_else(|| jorm::JormError::FileError("Invalid DAG file path".to_string()))?;
+
             match Schedule::new(id.clone(), cron, dag_file_str.to_string()) {
                 Ok(schedule) => {
                     let engine = Arc::new(JormEngine::new().await?);
                     let mut daemon = Daemon::new(engine, state_file, None, None);
-                    
+
                     match daemon.add_schedule(schedule).await {
                         Ok(_) => {
                             println!("✅ Schedule '{}' added successfully", id);
@@ -410,10 +450,10 @@ async fn handle_daemon_action(action: DaemonAction) -> Result<i32> {
         }
         DaemonAction::RemoveSchedule { id, state_file } => {
             println!("🗑️ Removing schedule: {}", id);
-            
+
             let engine = Arc::new(JormEngine::new().await?);
             let mut daemon = Daemon::new(engine, state_file, None, None);
-            
+
             match daemon.remove_schedule(&id).await {
                 Ok(_) => {
                     println!("✅ Schedule '{}' removed successfully", id);
@@ -428,28 +468,38 @@ async fn handle_daemon_action(action: DaemonAction) -> Result<i32> {
         DaemonAction::ListSchedules { state_file } => {
             let engine = Arc::new(JormEngine::new().await?);
             let daemon = Daemon::new(engine, state_file, None, None);
-            
+
             let schedules = daemon.list_schedules();
-            
+
             if schedules.is_empty() {
                 println!("📅 No schedules configured");
             } else {
                 println!("📅 Configured schedules:");
                 for schedule in schedules {
-                    let status = if schedule.enabled { "✅ Enabled" } else { "❌ Disabled" };
+                    let status = if schedule.enabled {
+                        "✅ Enabled"
+                    } else {
+                        "❌ Disabled"
+                    };
                     println!("  {} [{}]", schedule.id, status);
                     println!("    Cron: {}", schedule.cron_expression);
                     println!("    DAG: {}", schedule.dag_file);
                     if let Some(last) = schedule.last_execution {
-                        println!("    Last execution: {}", last.format("%Y-%m-%d %H:%M:%S UTC"));
+                        println!(
+                            "    Last execution: {}",
+                            last.format("%Y-%m-%d %H:%M:%S UTC")
+                        );
                     }
                     if let Some(next) = schedule.next_execution {
-                        println!("    Next execution: {}", next.format("%Y-%m-%d %H:%M:%S UTC"));
+                        println!(
+                            "    Next execution: {}",
+                            next.format("%Y-%m-%d %H:%M:%S UTC")
+                        );
                     }
                     println!();
                 }
             }
-            
+
             Ok(0)
         }
     }

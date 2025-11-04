@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use crate::core::engine::{ExecutionResult, JormEngine};
+use crate::core::error::JormError;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, HeaderMap, Method, Request, Response, Server, StatusCode};
+use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::net::SocketAddr;
-use hyper::{Body, Request, Response, Server, Method, StatusCode, HeaderMap};
-use hyper::service::{make_service_fn, service_fn};
-use serde::{Deserialize, Serialize};
-use crate::core::engine::{JormEngine, ExecutionResult};
-use crate::core::error::JormError;
+use std::sync::Arc;
 
 #[derive(Debug, Deserialize)]
 pub struct ExecuteFileRequest {
@@ -39,16 +39,16 @@ pub struct HttpServer {
 
 impl HttpServer {
     pub fn new(engine: Arc<JormEngine>, port: u16) -> Self {
-        Self { 
-            engine, 
+        Self {
+            engine,
             port,
             auth_token: std::env::var("JORM_AUTH_TOKEN").ok(),
         }
     }
 
     pub fn with_auth_token(engine: Arc<JormEngine>, port: u16, auth_token: String) -> Self {
-        Self { 
-            engine, 
+        Self {
+            engine,
             port,
             auth_token: Some(auth_token),
         }
@@ -77,7 +77,9 @@ impl HttpServer {
         if self.auth_token.is_some() {
             log_info("Authentication enabled - use Authorization: Bearer <token> header");
         } else {
-            log_warn("Authentication disabled - set JORM_AUTH_TOKEN environment variable to enable");
+            log_warn(
+                "Authentication disabled - set JORM_AUTH_TOKEN environment variable to enable",
+            );
         }
 
         if let Err(e) = server.await {
@@ -106,29 +108,31 @@ async fn handle_request(
             } else {
                 handle_execute_file(req, engine).await
             }
-        },
+        }
         (&Method::POST, "/execute/nl") => {
             if let Some(auth_error) = check_authentication(req.headers(), &auth_token) {
                 auth_error
             } else {
                 handle_execute_nl(req, engine).await
             }
-        },
+        }
         (&Method::GET, "/health") => handle_health().await,
         _ => handle_not_found().await,
     };
 
     let duration = start_time.elapsed();
-    log_info(&format!("Request completed: {} {} - {} - {:?}", 
-                     method, path, response.status(), duration));
+    log_info(&format!(
+        "Request completed: {} {} - {} - {:?}",
+        method,
+        path,
+        response.status(),
+        duration
+    ));
 
     Ok(response)
 }
 
-async fn handle_execute_file(
-    req: Request<Body>,
-    engine: Arc<JormEngine>,
-) -> Response<Body> {
+async fn handle_execute_file(req: Request<Body>, engine: Arc<JormEngine>) -> Response<Body> {
     let body_bytes = match hyper::body::to_bytes(req.into_body()).await {
         Ok(bytes) => bytes,
         Err(e) => {
@@ -147,11 +151,7 @@ async fn handle_execute_file(
         Err(e) => {
             let error_msg = format!("Failed to parse JSON: {}", e);
             log_error(&error_msg);
-            return create_error_response(
-                StatusCode::BAD_REQUEST,
-                "Invalid JSON",
-                &error_msg,
-            );
+            return create_error_response(StatusCode::BAD_REQUEST, "Invalid JSON", &error_msg);
         }
     };
 
@@ -160,9 +160,11 @@ async fn handle_execute_file(
     match engine.execute_from_file(&request.dag_file).await {
         Ok(result) => {
             let execution_id = generate_execution_id();
-            log_info(&format!("DAG execution completed - ID: {} - Success: {}", 
-                             execution_id, result.success));
-            
+            log_info(&format!(
+                "DAG execution completed - ID: {} - Success: {}",
+                execution_id, result.success
+            ));
+
             let response = ExecuteResponse {
                 success: result.success,
                 message: result.message.clone(),
@@ -183,10 +185,7 @@ async fn handle_execute_file(
     }
 }
 
-async fn handle_execute_nl(
-    req: Request<Body>,
-    engine: Arc<JormEngine>,
-) -> Response<Body> {
+async fn handle_execute_nl(req: Request<Body>, engine: Arc<JormEngine>) -> Response<Body> {
     let body_bytes = match hyper::body::to_bytes(req.into_body()).await {
         Ok(bytes) => bytes,
         Err(e) => {
@@ -205,22 +204,26 @@ async fn handle_execute_nl(
         Err(e) => {
             let error_msg = format!("Failed to parse JSON: {}", e);
             log_error(&error_msg);
-            return create_error_response(
-                StatusCode::BAD_REQUEST,
-                "Invalid JSON",
-                &error_msg,
-            );
+            return create_error_response(StatusCode::BAD_REQUEST, "Invalid JSON", &error_msg);
         }
     };
 
-    log_info(&format!("Executing natural language request: {}", request.description));
+    log_info(&format!(
+        "Executing natural language request: {}",
+        request.description
+    ));
 
-    match engine.execute_from_natural_language(&request.description).await {
+    match engine
+        .execute_from_natural_language(&request.description)
+        .await
+    {
         Ok(result) => {
             let execution_id = generate_execution_id();
-            log_info(&format!("Natural language execution completed - ID: {} - Success: {}", 
-                             execution_id, result.success));
-            
+            log_info(&format!(
+                "Natural language execution completed - ID: {} - Success: {}",
+                execution_id, result.success
+            ));
+
             let response = ExecuteResponse {
                 success: result.success,
                 message: result.message.clone(),
@@ -284,19 +287,22 @@ fn create_error_response(status: StatusCode, error: &str, message: &str) -> Resp
     create_json_response(status, &error_response)
 }
 
-fn check_authentication(headers: &HeaderMap, auth_token: &Option<String>) -> Option<Response<Body>> {
+fn check_authentication(
+    headers: &HeaderMap,
+    auth_token: &Option<String>,
+) -> Option<Response<Body>> {
     if let Some(expected_token) = auth_token {
         if let Some(auth_header) = headers.get("authorization") {
             if let Ok(auth_str) = auth_header.to_str() {
-                if auth_str.starts_with("Bearer ") {
-                    let token = &auth_str[7..]; // Remove "Bearer " prefix
+                if let Some(token) = auth_str.strip_prefix("Bearer ") {
+                    // Remove "Bearer " prefix
                     if token == expected_token {
                         return None; // Authentication successful
                     }
                 }
             }
         }
-        
+
         log_warn("Authentication failed - invalid or missing token");
         Some(create_error_response(
             StatusCode::UNAUTHORIZED,

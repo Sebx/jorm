@@ -1,24 +1,40 @@
-use crate::core::{error::JormError, task::TaskType};
 use crate::core::engine::TaskResult;
+use crate::core::{error::JormError, task::TaskType};
 use std::process::Stdio;
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
 
 pub struct PythonExecutor;
 
+impl Default for PythonExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PythonExecutor {
     pub fn new() -> Self {
         Self
     }
 
-    pub async fn execute(&self, task_name: &str, task_type: &TaskType) -> Result<TaskResult, JormError> {
+    pub async fn execute(
+        &self,
+        task_name: &str,
+        task_type: &TaskType,
+    ) -> Result<TaskResult, JormError> {
         match task_type {
-            TaskType::Python { script, args, working_dir } => {
-                self.execute_python_script(task_name, script, args.as_ref(), working_dir.as_deref()).await
+            TaskType::Python {
+                script,
+                args,
+                working_dir,
+            } => {
+                self.execute_python_script(task_name, script, args.as_ref(), working_dir.as_deref())
+                    .await
             }
-            _ => Err(JormError::ExecutionError(
-                format!("Python executor cannot handle task type: {:?}", task_type)
-            )),
+            _ => Err(JormError::ExecutionError(format!(
+                "Python executor cannot handle task type: {:?}",
+                task_type
+            ))),
         }
     }
 
@@ -47,9 +63,9 @@ impl PythonExecutor {
 
         // Try python3 first
         let timeout_duration = Duration::from_secs(60); // Python scripts might take longer
-        
+
         let result = timeout(timeout_duration, cmd.output()).await;
-        
+
         // If python3 fails, try python
         let output = match result {
             Ok(Ok(output)) => output,
@@ -71,14 +87,17 @@ impl PythonExecutor {
                 match timeout(timeout_duration, cmd.output()).await {
                     Ok(Ok(output)) => output,
                     Ok(Err(e)) => {
-                        return Err(JormError::ExecutionError(
-                            format!("Failed to execute Python script '{}': {}", script, e)
-                        ));
+                        return Err(JormError::ExecutionError(format!(
+                            "Failed to execute Python script '{}': {}",
+                            script, e
+                        )));
                     }
                     Err(_) => {
-                        return Err(JormError::ExecutionError(
-                            format!("Python script '{}' timed out after {} seconds", script, timeout_duration.as_secs())
-                        ));
+                        return Err(JormError::ExecutionError(format!(
+                            "Python script '{}' timed out after {} seconds",
+                            script,
+                            timeout_duration.as_secs()
+                        )));
                     }
                 }
             }
@@ -86,7 +105,7 @@ impl PythonExecutor {
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        
+
         let success = output.status.success();
         let error = if !stderr.is_empty() && !success {
             Some(stderr)

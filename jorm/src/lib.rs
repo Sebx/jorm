@@ -1,18 +1,25 @@
 // Jorm - Simplified DAG Execution Engine
 // Core library exports
 
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::module_inception)]
+
 pub mod core;
-pub mod parser;
 pub mod executor;
 pub mod nlp;
-pub mod server;
+pub mod parser;
 pub mod scheduler;
+pub mod server;
 
 // Re-export main types for convenience
-pub use core::{engine::JormEngine, dag::Dag, task::{Task, TaskType}};
-pub use parser::dag_parser::DagParser;
+pub use core::{
+    dag::Dag,
+    engine::JormEngine,
+    task::{Task, TaskType},
+};
 pub use executor::TaskExecutor;
-pub use nlp::generator::{NlpProcessor, DagPreview, DagEdit};
+pub use nlp::generator::{DagEdit, DagPreview, NlpProcessor};
+pub use parser::dag_parser::DagParser;
 
 // Error types
 pub use core::error::JormError;

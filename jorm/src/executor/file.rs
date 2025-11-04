@@ -1,29 +1,40 @@
-use crate::core::{error::JormError, task::TaskType};
 use crate::core::engine::TaskResult;
+use crate::core::{error::JormError, task::TaskType};
 use std::path::Path;
 use tokio::fs;
 
 pub struct FileExecutor;
+
+impl Default for FileExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl FileExecutor {
     pub fn new() -> Self {
         Self
     }
 
-    pub async fn execute(&self, task_name: &str, task_type: &TaskType) -> Result<TaskResult, JormError> {
+    pub async fn execute(
+        &self,
+        task_name: &str,
+        task_type: &TaskType,
+    ) -> Result<TaskResult, JormError> {
         match task_type {
-            TaskType::FileCopy { source, destination } => {
-                self.copy_file(task_name, source, destination).await
-            }
-            TaskType::FileMove { source, destination } => {
-                self.move_file(task_name, source, destination).await
-            }
-            TaskType::FileDelete { path } => {
-                self.delete_file(task_name, path).await
-            }
-            _ => Err(JormError::ExecutionError(
-                format!("File executor cannot handle task type: {:?}", task_type)
-            )),
+            TaskType::FileCopy {
+                source,
+                destination,
+            } => self.copy_file(task_name, source, destination).await,
+            TaskType::FileMove {
+                source,
+                destination,
+            } => self.move_file(task_name, source, destination).await,
+            TaskType::FileDelete { path } => self.delete_file(task_name, path).await,
+            _ => Err(JormError::ExecutionError(format!(
+                "File executor cannot handle task type: {:?}",
+                task_type
+            ))),
         }
     }
 
@@ -62,14 +73,20 @@ impl FileExecutor {
             Ok(bytes_copied) => Ok(TaskResult {
                 task_name: task_name.to_string(),
                 success: true,
-                output: format!("Successfully copied {} bytes from '{}' to '{}'", bytes_copied, source, destination),
+                output: format!(
+                    "Successfully copied {} bytes from '{}' to '{}'",
+                    bytes_copied, source, destination
+                ),
                 error: None,
             }),
             Err(e) => Ok(TaskResult {
                 task_name: task_name.to_string(),
                 success: false,
                 output: String::new(),
-                error: Some(format!("Failed to copy file from '{}' to '{}': {}", source, destination, e)),
+                error: Some(format!(
+                    "Failed to copy file from '{}' to '{}': {}",
+                    source, destination, e
+                )),
             }),
         }
     }
@@ -116,18 +133,17 @@ impl FileExecutor {
                 task_name: task_name.to_string(),
                 success: false,
                 output: String::new(),
-                error: Some(format!("Failed to move file from '{}' to '{}': {}", source, destination, e)),
+                error: Some(format!(
+                    "Failed to move file from '{}' to '{}': {}",
+                    source, destination, e
+                )),
             }),
         }
     }
 
-    async fn delete_file(
-        &self,
-        task_name: &str,
-        path: &str,
-    ) -> Result<TaskResult, JormError> {
+    async fn delete_file(&self, task_name: &str, path: &str) -> Result<TaskResult, JormError> {
         let file_path = Path::new(path);
-        
+
         // Check if file exists
         if !file_path.exists() {
             return Ok(TaskResult {
@@ -140,7 +156,7 @@ impl FileExecutor {
 
         // Check if it's a file or directory
         let is_dir = file_path.is_dir();
-        
+
         // Perform the delete operation
         let result = if is_dir {
             fs::remove_dir_all(path).await

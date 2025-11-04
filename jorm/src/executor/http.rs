@@ -1,5 +1,5 @@
-use crate::core::{error::JormError, task::TaskType};
 use crate::core::engine::TaskResult;
+use crate::core::{error::JormError, task::TaskType};
 use reqwest::{Client, Method};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -7,6 +7,12 @@ use std::time::Duration;
 
 pub struct HttpExecutor {
     client: Client,
+}
+
+impl Default for HttpExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HttpExecutor {
@@ -19,14 +25,25 @@ impl HttpExecutor {
         Self { client }
     }
 
-    pub async fn execute(&self, task_name: &str, task_type: &TaskType) -> Result<TaskResult, JormError> {
+    pub async fn execute(
+        &self,
+        task_name: &str,
+        task_type: &TaskType,
+    ) -> Result<TaskResult, JormError> {
         match task_type {
-            TaskType::Http { method, url, headers, body } => {
-                self.execute_http_request(task_name, method, url, headers.as_ref(), body.as_deref()).await
+            TaskType::Http {
+                method,
+                url,
+                headers,
+                body,
+            } => {
+                self.execute_http_request(task_name, method, url, headers.as_ref(), body.as_deref())
+                    .await
             }
-            _ => Err(JormError::ExecutionError(
-                format!("HTTP executor cannot handle task type: {:?}", task_type)
-            )),
+            _ => Err(JormError::ExecutionError(format!(
+                "HTTP executor cannot handle task type: {:?}",
+                task_type
+            ))),
         }
     }
 
@@ -62,7 +79,7 @@ impl HttpExecutor {
             Ok(response) => {
                 let status = response.status();
                 let success = status.is_success();
-                
+
                 // Get response body
                 let response_text = match response.text().await {
                     Ok(text) => text,

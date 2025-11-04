@@ -1,8 +1,13 @@
 // Unit tests for core components
+#![allow(clippy::assertions_on_constants)]
+
 mod unit {
     mod core_tests {
-        use jorm::core::{dag::Dag, task::{Task, TaskType}, error::JormError};
-
+        use jorm::core::{
+            dag::Dag,
+            error::JormError,
+            task::{Task, TaskType},
+        };
 
         #[test]
         fn test_dag_creation() {
@@ -22,7 +27,7 @@ mod unit {
                     working_dir: None,
                 },
             );
-            
+
             dag.add_task(task);
             assert_eq!(dag.tasks.len(), 1);
             assert!(dag.tasks.contains_key("test_task"));
@@ -32,7 +37,7 @@ mod unit {
         fn test_validate_empty_dag() {
             let dag = Dag::new("empty_dag".to_string());
             let result = dag.validate();
-            
+
             assert!(result.is_err());
             match result.unwrap_err() {
                 JormError::ParseError(msg) => assert!(msg.contains("at least one task")),
@@ -50,7 +55,7 @@ mod unit {
                 },
             );
             assert!(valid_task.validate().is_ok());
-            
+
             let invalid_task = Task::new(
                 "invalid_shell".to_string(),
                 TaskType::Shell {
@@ -63,8 +68,8 @@ mod unit {
     }
 
     mod parser_tests {
-        use jorm::parser::dag_parser::DagParser;
         use jorm::core::task::TaskType;
+        use jorm::parser::dag_parser::DagParser;
 
         #[tokio::test]
         async fn test_parse_shell_task() {
@@ -78,14 +83,17 @@ task simple_shell {
 
             let parser = DagParser::new();
             let result = parser.parse_content(content);
-            
+
             assert!(result.is_ok());
             let dag = result.unwrap();
             assert_eq!(dag.tasks.len(), 1);
-            
+
             let task = dag.tasks.get("simple_shell").unwrap();
             match &task.task_type {
-                TaskType::Shell { command, working_dir } => {
+                TaskType::Shell {
+                    command,
+                    working_dir,
+                } => {
                     assert_eq!(command, "echo hello world");
                     assert_eq!(working_dir.as_ref().unwrap(), "/tmp");
                 }
@@ -105,14 +113,17 @@ task copy_file {
 
             let parser = DagParser::new();
             let result = parser.parse_content(content);
-            
+
             assert!(result.is_ok());
             let dag = result.unwrap();
             assert_eq!(dag.tasks.len(), 1);
-            
+
             let copy_task = dag.tasks.get("copy_file").unwrap();
             match &copy_task.task_type {
-                TaskType::FileCopy { source, destination } => {
+                TaskType::FileCopy {
+                    source,
+                    destination,
+                } => {
                     assert_eq!(source, "source.txt");
                     assert_eq!(destination, "dest.txt");
                 }
@@ -122,21 +133,24 @@ task copy_file {
     }
 
     mod executor_tests {
+        use jorm::core::{
+            dag::Dag,
+            task::{Task, TaskType},
+        };
         use jorm::executor::TaskExecutor;
-        use jorm::core::{dag::Dag, task::{Task, TaskType}};
 
         #[tokio::test]
         async fn test_executor_creation() {
-            let executor = TaskExecutor::new();
+            let _executor = TaskExecutor::new();
             // Test that executor can be created
-            assert!(true);
+            // Test that executor can be created successfully
         }
 
         #[tokio::test]
         async fn test_execute_simple_dag() {
             let executor = TaskExecutor::new();
             let mut dag = Dag::new("simple_dag".to_string());
-            
+
             let task = Task::new(
                 "echo_task".to_string(),
                 TaskType::Shell {
@@ -144,12 +158,12 @@ task copy_file {
                     working_dir: None,
                 },
             );
-            
+
             dag.add_task(task);
-            
+
             let result = executor.execute_dag(&dag).await;
             assert!(result.is_ok(), "Simple DAG execution should succeed");
-            
+
             let execution_result = result.unwrap();
             assert_eq!(execution_result.task_results.len(), 1);
             assert_eq!(execution_result.task_results[0].task_name, "echo_task");
@@ -162,13 +176,17 @@ task copy_file {
         #[tokio::test]
         async fn test_nlp_processor_creation() {
             let result = NlpProcessor::new().await;
-            assert!(result.is_ok(), "Failed to create NLP processor: {:?}", result.err());
+            assert!(
+                result.is_ok(),
+                "Failed to create NLP processor: {:?}",
+                result.err()
+            );
         }
 
         #[tokio::test]
         async fn test_validate_generated_dag() {
             let processor = NlpProcessor::new().await.unwrap();
-            
+
             // Valid DAG content
             let valid_dag = r#"
 task test_task {
@@ -176,7 +194,7 @@ task test_task {
     command: "echo hello"
 }
 "#;
-            
+
             let result = processor.validate_generated_dag(valid_dag);
             assert!(result.is_ok(), "Valid DAG should pass validation");
         }

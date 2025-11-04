@@ -1,7 +1,7 @@
 #[cfg(test)]
-mod tests {
-    use crate::parser::dag_parser::DagParser;
+mod parser_tests {
     use crate::core::task::TaskType;
+    use crate::parser::dag_parser::DagParser;
 
     #[tokio::test]
     async fn test_parse_simple_dag() {
@@ -23,25 +23,28 @@ task copy_file {
 
         let parser = DagParser::new();
         let result = parser.parse_content(content);
-        
+
         assert!(result.is_ok(), "Failed to parse DAG: {:?}", result.err());
-        
+
         let dag = result.unwrap();
         assert_eq!(dag.tasks.len(), 2);
         assert!(dag.tasks.contains_key("hello"));
         assert!(dag.tasks.contains_key("copy_file"));
-        
+
         // Check task types
         if let Some(hello_task) = dag.tasks.get("hello") {
             match &hello_task.task_type {
-                TaskType::Shell { command, working_dir } => {
+                TaskType::Shell {
+                    command,
+                    working_dir,
+                } => {
                     assert_eq!(command, "echo hello world");
                     assert_eq!(working_dir.as_ref().unwrap(), "/tmp");
                 }
                 _ => panic!("Expected shell task type"),
             }
         }
-        
+
         // Check dependencies
         assert!(dag.dependencies.contains_key("copy_file"));
         let deps = dag.dependencies.get("copy_file").unwrap();
@@ -66,7 +69,7 @@ task task_b {
 
         let parser = DagParser::new();
         let result = parser.parse_content(content);
-        
+
         assert!(result.is_err(), "Expected circular dependency error");
         let error = result.err().unwrap();
         assert!(error.to_string().contains("Circular dependency"));
@@ -84,7 +87,7 @@ task task_a {
 
         let parser = DagParser::new();
         let result = parser.parse_content(content);
-        
+
         assert!(result.is_err(), "Expected missing dependency error");
         let error = result.err().unwrap();
         assert!(error.to_string().contains("not found"));
@@ -101,7 +104,7 @@ task task_a {
 
         let parser = DagParser::new();
         let result = parser.parse_content(content);
-        
+
         assert!(result.is_err(), "Expected invalid task type error");
         let error = result.err().unwrap();
         assert!(error.to_string().contains("Invalid task type"));
@@ -118,7 +121,7 @@ task task_a {
 
         let parser = DagParser::new();
         let result = parser.parse_content(content);
-        
+
         assert!(result.is_err(), "Expected missing parameter error");
         let error = result.err().unwrap();
         assert!(error.to_string().contains("missing command"));

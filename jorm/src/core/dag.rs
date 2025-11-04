@@ -1,6 +1,6 @@
+use crate::core::task::Task;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::core::task::Task;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dag {
@@ -29,20 +29,20 @@ impl Dag {
     pub fn validate(&self) -> Result<(), crate::core::error::JormError> {
         // Check for circular dependencies
         self.check_circular_dependencies()?;
-        
+
         // Validate task references in dependencies
         self.validate_task_references()?;
-        
+
         // Validate all tasks have required parameters
         self.validate_task_parameters()?;
-        
+
         // Validate DAG has at least one task
         if self.tasks.is_empty() {
             return Err(crate::core::error::JormError::ParseError(
-                "DAG must contain at least one task".to_string()
+                "DAG must contain at least one task".to_string(),
             ));
         }
-        
+
         Ok(())
     }
 
@@ -54,10 +54,13 @@ impl Dag {
 
         for task_name in self.tasks.keys() {
             if !visited.get(task_name).unwrap_or(&false) {
-                if let Some(cycle_path) = self.find_cycle(task_name, &mut visited, &mut rec_stack, &mut path)? {
-                    return Err(crate::core::error::JormError::ParseError(
-                        format!("Circular dependency detected: {}", cycle_path.join(" -> "))
-                    ));
+                if let Some(cycle_path) =
+                    self.find_cycle(task_name, &mut visited, &mut rec_stack, &mut path)?
+                {
+                    return Err(crate::core::error::JormError::ParseError(format!(
+                        "Circular dependency detected: {}",
+                        cycle_path.join(" -> ")
+                    )));
                 }
             }
         }
@@ -99,16 +102,18 @@ impl Dag {
     fn validate_task_references(&self) -> Result<(), crate::core::error::JormError> {
         for (task_name, deps) in &self.dependencies {
             if !self.tasks.contains_key(task_name) {
-                return Err(crate::core::error::JormError::ParseError(
-                    format!("Task '{}' referenced in dependencies but not defined", task_name)
-                ));
+                return Err(crate::core::error::JormError::ParseError(format!(
+                    "Task '{}' referenced in dependencies but not defined",
+                    task_name
+                )));
             }
-            
+
             for dep in deps {
                 if !self.tasks.contains_key(dep) {
-                    return Err(crate::core::error::JormError::ParseError(
-                        format!("Dependency '{}' for task '{}' not found", dep, task_name)
-                    ));
+                    return Err(crate::core::error::JormError::ParseError(format!(
+                        "Dependency '{}' for task '{}' not found",
+                        dep, task_name
+                    )));
                 }
             }
         }
@@ -119,9 +124,10 @@ impl Dag {
         for (task_name, task) in &self.tasks {
             // Validate each task's parameters
             task.validate().map_err(|e| {
-                crate::core::error::JormError::ParseError(
-                    format!("Task '{}' validation failed: {}", task_name, e)
-                )
+                crate::core::error::JormError::ParseError(format!(
+                    "Task '{}' validation failed: {}",
+                    task_name, e
+                ))
             })?;
         }
         Ok(())
