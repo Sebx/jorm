@@ -1,249 +1,123 @@
 # 🦀 JORM - Job Orchestration and Resource Management
 
-A high-performance, production-ready DAG (Directed Acyclic Graph) execution engine built with Rust, featuring clean architecture, comprehensive testing, and enterprise-grade observability.
+A high-performance DAG (Directed Acyclic Graph) execution engine built with Rust, featuring clean architecture and comprehensive testing.
 
 ## ✨ Features
 
-- **🏗️ Clean Architecture**: Domain-Driven Design with hexagonal architecture
-- **🧪 156 Tests**: 100% coverage for new code, all passing in <2s
-- **📊 Structured Logging**: Production-ready observability with tracing and correlation IDs
-- **🔄 Hexagonal Architecture**: Swappable infrastructure adapters (FileSystem, Memory, Native)
-- **💉 Dependency Injection**: Clean composition with ApplicationBuilder
+- **🏗️ Modular Architecture**: Clean separation of concerns with core, executor, parser, and scheduler modules
+- **🧪 38 Tests**: Comprehensive test coverage across unit and integration tests
+- **📊 Multiple Executors**: Shell, Python, Rust, HTTP, File, and Jorm task executors
+- **🤖 AI Integration**: Natural language DAG generation with OpenAI
 - **⚡ High Performance**: Async/await throughout, optimized execution
-- **🛡️ Type Safety**: Value objects eliminate entire bug classes
-- **📝 Fully Documented**: Every public API documented with examples
+- **� STcheduling**: Cron-based scheduling with daemon support
 
 ## 🚀 Quick Start
 
-### Build & Test
 ```bash
-# Navigate to project
+# Build and test
 cd jorm
-
-# Build (release)
 cargo build --release
-
-# Run tests (156 tests in <2s)
 cargo test
 
-# Run specific test suite
-cargo test domain
-cargo test application
-cargo test infrastructure
-```
-
-### Run CLI
-```bash
-# Show help
+# Run CLI
 cargo run -- --help
-
-# Run a DAG
-cargo run -- run path/to/my_dag.yaml
-
-# Validate a DAG
-cargo run -- validate path/to/my_dag.yaml
-
-# Analyze a DAG (AI-assisted)
-cargo run -- analyze path/to/my_dag.yaml
-
-# Generate a DAG from natural language
+cargo run -- run path/to/my_dag.txt
+cargo run -- validate path/to/my_dag.txt
 cargo run -- generate "Create a data pipeline"
+cargo run -- analyze path/to/my_dag.txt
 
-# Interactive mode
-cargo run -- chat
-```
-
-### Configure Logging
-```bash
-# Set log level
+# Configure logging
 export RUST_LOG=info
-export RUST_LOG=jorm=debug,tokio=info
-
-# Enable JSON logging for production
-export JORM_LOG_JSON=1
+export JORM_LOG_JSON=1  # JSON logging for production
 ```
 
 ## 📖 Architecture
 
-### Layered Architecture
 ```
 ┌─────────────────────────────────────────┐
-│      Presentation (CLI, HTTP, gRPC)     │
+│      CLI & HTTP Server                  │
 └─────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
-│      Application Builder (DI)           │
+│      Core Engine                        │
+│  • JormEngine • DAG • Task              │
 └─────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
-│      Application Services               │
-│  • DagService                           │
-│  • ExecutionService                     │
+│      Modules                            │
+│  • Parser • Executor • Scheduler • NLP  │
 └─────────────────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────┐
-│      Observability                      │
-│  • Tracing                              │
-│  • Correlation IDs                      │
-└─────────────────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────┐
-│      Domain Layer                       │
-│  • DAG, Task, Dependency                │
-│  • DagValidator, DependencyResolver     │
-│  • Value Objects                        │
-└─────────────────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────┐
-│      Infrastructure (Ports & Adapters)  │
-│  • DagParser (FileSystem, Memory)       │
-│  • TaskExecutor (Native)                │
-│  • Storage (Memory, SQLite)             │
-└─────────────────────────────────────────┘
-```
-
-### Key Principles
-- **Domain-Driven Design**: Rich domain model with business logic
-- **Hexagonal Architecture**: Core logic independent of infrastructure
-- **Dependency Injection**: All dependencies injected through constructor
-- **Test-Driven Development**: Tests written before implementation
-- **Clean Code**: SOLID principles, clear naming, small functions
-
-## 📊 Metrics
-
-- **Total Tests**: 156 (all passing)
-- **Test Coverage**: 100% (new code)
-- **Test Execution**: <2.01s
-- **Production Code**: ~4,500 LOC
-- **Test Code**: ~1,600 LOC
-- **Documentation**: 250+ methods documented
-- **Code Quality**: Exceptional (cyclomatic complexity <6)
-
-## 📚 Documentation
-
-### Essential Guides
-- **[JORM_ARCHITECTURE_COMPLETE.md](JORM_ARCHITECTURE_COMPLETE.md)** - Complete architecture overview and all 10 iterations
-- **[ARCHITECTURE_CRITIQUE.md](ARCHITECTURE_CRITIQUE.md)** - Initial analysis and improvement plan
-- **[COMPREHENSIVE_README.md](COMPREHENSIVE_README.md)** - Detailed usage guide with examples
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference for common tasks
-
-### Code Documentation
-All public APIs are documented with:
-- Function purpose and behavior
-- Parameter descriptions
-- Return value descriptions
-- Error conditions
-- Usage examples
-
-## 🔧 Development
-
-### Project Structure
-```
-jorm/
-├── src/
-│   ├── domain/              # Business logic (pure)
-│   ├── application/         # Use cases & services
-│   ├── infrastructure/      # Ports & adapters
-│   ├── observability/       # Logging & tracing
-│   ├── executor/            # Task execution
-│   ├── parser/              # DAG parsing
-│   └── main.rs              # CLI entry point
-├── tests/                   # Integration tests
-└── Cargo.toml               # Dependencies
-```
-
-### Adding New Features
-1. **Write tests first** (TDD approach)
-2. **Implement in domain layer** (business logic)
-3. **Add application service** (use case)
-4. **Create infrastructure adapter** (if needed)
-5. **Document** (doc comments with examples)
-
-### Code Quality
-```bash
-# Format code
-cargo fmt
-
-# Lint code
-cargo clippy --all-targets --all-features -- -D warnings
-
-# Security audit
-cargo audit
-
-# Run all checks
-cargo fmt && cargo clippy && cargo test && cargo audit
 ```
 
 ## 🏗️ Usage Example
 
 ```rust
-use jorm::application::ApplicationBuilder;
-use jorm::infrastructure::*;
-use std::sync::Arc;
+use jorm::JormEngine;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // Initialize observability
-    jorm::observability::init_tracing();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create engine
+    let engine = JormEngine::new().await?;
     
-    // Build application with dependencies
-    let app = ApplicationBuilder::new()
-        .with_dag_parser(Arc::new(FileSystemDagParser::new()))
-        .with_dag_storage(Arc::new(InMemoryDagStorage::new()))
-        .with_execution_storage(Arc::new(InMemoryExecutionStorage::new()))
-        .with_task_executor(Arc::new(NativeTaskExecutorAdapter::new()))
-        .build()?;
+    // Execute DAG from file
+    let result = engine.execute_from_file("workflow.txt").await?;
+    println!("Execution completed: {:?}", result);
     
-    // Use services
-    let dag_service = app.dag_service();
+    // Generate DAG from natural language
+    let dag_content = engine.generate_dag_from_nl("Build project and run tests").await?;
+    println!("Generated DAG:\n{}", dag_content);
     
     Ok(())
 }
 ```
 
-## 🤝 Contributing
+## 📊 Metrics
 
-1. Fork the repository
-2. Create a feature branch
-3. Write tests first (TDD)
-4. Implement the feature
-5. Ensure all tests pass
-6. Run code quality checks
-7. Submit a pull request
+- **Tests**: 38 (21 unit + 7 integration + 10 unit tests)
+- **Modules**: 5 core modules (core, executor, parser, scheduler, nlp)
+- **Executors**: 6 different task executors supported
+- **Performance**: Fast startup, async execution
 
-## 🔒 Security
+## 🔧 Development
 
-- Never commit secrets to `.jorm/config.toml`
-- Use environment variables for sensitive data
-- Review executor implementations for command injection
-- Enforce input sanitization and timeouts
-- Run `cargo audit` regularly
+```bash
+# Code quality checks
+cargo fmt
+cargo clippy --all-targets --all-features -- -D warnings
+cargo audit
+
+# Run specific test suites
+cargo test unit
+cargo test integration
+cargo test --lib
+```
+
+### Project Structure
+```
+jorm/
+├── src/
+│   ├── core/                # Core DAG and task logic
+│   ├── executor/            # Task executors (shell, python, etc.)
+│   ├── parser/              # DAG file parsing
+│   ├── scheduler/           # Cron scheduling and daemon
+│   ├── server/              # HTTP server
+│   ├── nlp/                 # Natural language processing
+│   └── main.rs              # CLI entry point
+└── tests/                   # Integration and unit tests
+```
+
+## 📚 Documentation
+
+- Examples in `jorm/examples/` directory
+- API documentation: `cargo doc --open`
+- Test files demonstrate usage patterns
 
 ## 📄 License
 
 MIT License - see LICENSE file for details
 
-## 🙏 Acknowledgments
-
-Built with:
-- Rust 2021 Edition
-- Tokio (async runtime)
-- Tracing (observability)
-- Serde (serialization)
-- Anyhow (error handling)
-
-## 📈 Performance
-
-- **Startup Time**: <100ms
-- **Test Execution**: <2.01s for 156 tests
-- **Memory Usage**: Optimized for large DAGs
-- **Concurrency**: Configurable parallel execution
-
 ---
 
-**Status**: ✅ Production Ready  
-**Quality**: ✅ World-Class Architecture  
-**Tests**: ✅ 156 passing  
-**Coverage**: ✅ 100% (new code)  
+**Status**: ✅ Active Development | **Tests**: ✅ 38 passing | **Modules**: ✅ 5 core modules
 
 **Built with ❤️ using Rust**
