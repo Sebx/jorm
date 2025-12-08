@@ -21,6 +21,11 @@ exclude = [
     "test_*.txt"
 ]
 
+[features]
+default = []
+llm = []  # Placeholder for future LLM integration
+tier3 = ["candle-core", "candle-nn", "candle-transformers", "tokenizers", "whatlang", "lru"]  # Transformer-based NLP
+
 [dependencies]
 # CLI framework
 clap = { version = "4.0", features = ["derive"] }
@@ -42,8 +47,18 @@ cron = "0.12"
 regex = "1.0"
 # Date and time for logging and scheduling
 chrono = { version = "0.4", features = ["serde"] }
+# LLM for advanced natural language processing (placeholder for future integration)
+# Note: LLM dependencies will be added when stable Rust-compatible libraries are available
 # Simple text processing for natural language parsing
-# Note: Using lightweight regex-based NLP instead of heavy AI models
+# Note: Using lightweight regex-based NLP with LLM fallback
+
+# Tier 3: Transformer-based NLP (optional feature)
+candle-core = { version = "0.8", optional = true }
+candle-nn = { version = "0.8", optional = true }
+candle-transformers = { version = "0.8", optional = true }
+tokenizers = { version = "0.20", optional = true }
+whatlang = { version = "0.16", optional = true }
+lru = { version = "0.12", optional = true }
 
 [dev-dependencies]
 # Temporary files for testing

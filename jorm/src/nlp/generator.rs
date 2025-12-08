@@ -3,6 +3,9 @@ use crate::parser::dag_parser::DagParser;
 use regex::Regex;
 use std::collections::HashMap;
 
+#[cfg(feature = "llm")]
+use std::path::Path;
+
 pub struct NlpProcessor {
     // Pattern matchers for different task types
     shell_patterns: Vec<Regex>,
@@ -12,6 +15,9 @@ pub struct NlpProcessor {
     rust_patterns: Vec<Regex>,
     jorm_patterns: Vec<Regex>,
     dependency_patterns: Vec<Regex>,
+    // LLM support (when feature is enabled)
+    #[cfg(feature = "llm")]
+    llm_enabled: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +49,10 @@ impl NlpProcessor {
             Regex::new(r"(?i)backup\s+files").unwrap(),
             Regex::new(r"(?i)backup\s+results").unwrap(),
             Regex::new(r"(?i)copy\s+config\s+files").unwrap(),
+            Regex::new(r"(?i)create\s+(?:a\s+)?(?:(\d+)kb\s+)?(?:text\s+)?file").unwrap(),
+            Regex::new(r"(?i)copy\s+it\s+(\d+)\s+times").unwrap(),
+            Regex::new(r"(?i)copy\s+(?:the\s+)?file\s+(\d+)\s+times").unwrap(),
+            Regex::new(r"(?i)(?:with\s+)?random\s+names").unwrap(),
         ];
 
         let http_patterns = vec![
@@ -94,11 +104,13 @@ impl NlpProcessor {
             rust_patterns,
             jorm_patterns,
             dependency_patterns,
+            #[cfg(feature = "llm")]
+            llm_enabled: Self::check_llm_availability(),
         })
     }
 
     pub async fn generate_dag(&self, description: &str) -> Result<String, JormError> {
-        let tasks = self.parse_natural_language(description)?;
+        let tasks = self.parse_natural_language(description).await?;
         let dag_content = self.generate_dag_syntax(tasks)?;
 
         // Validate the generated DAG
@@ -107,11 +119,15 @@ impl NlpProcessor {
         Ok(dag_content)
     }
 
-    fn parse_natural_language(&self, description: &str) -> Result<Vec<ParsedTask>, JormError> {
+    async fn parse_natural_language(&self, description: &str) -> Result<Vec<ParsedTask>, JormError> {
         let mut tasks = Vec::new();
 
+        // Check for complex pipeline patterns first
+        if let Some(pipeline_tasks) = self.parse_pipeline_description(description)? {
+            tasks.extend(pipeline_tasks);
+        }
         // Check for patterns that indicate multiple similar tasks (like "10 bash tasks")
-        if let Some(multiple_tasks) = self.parse_multiple_tasks(description)? {
+        else if let Some(multiple_tasks) = self.parse_multiple_tasks(description)? {
             tasks.extend(multiple_tasks);
         } else {
             // Parse as individual sentences
@@ -129,13 +145,104 @@ impl NlpProcessor {
             }
         }
 
+        // If no tasks found with pattern matching, try LLM as fallback
+        if tasks.is_empty() {
+            #[cfg(feature = "llm")]
+            if self.llm_enabled {
+                if let Some(llm_tasks) = self.try_llm_generation(description).await? {
+                    tasks.extend(llm_tasks);
+                }
+            }
+        }
+
         if tasks.is_empty() {
             return Err(JormError::NlpError(
-                "Could not parse any tasks from the description".to_string(),
+                "Could not parse any tasks from the description using pattern matching or LLM".to_string(),
             ));
         }
 
         Ok(tasks)
+    }
+
+    fn parse_pipeline_description(
+        &self,
+        description: &str,
+    ) -> Result<Option<Vec<ParsedTask>>, JormError> {
+        // Pattern for file creation and copying pipeline
+        let pipeline_pattern = Regex::new(
+            r"(?i)(?:a\s+)?pipeline\s+that\s+create(?:s?).*?(?:(\d+)kb\s+)?(?:text\s+)?file.*?(?:copy\s+it\s+(\d+)\s+times|copy.*?(\d+)\s+times)"
+        ).unwrap();
+
+        // Also try a simpler pattern for file creation and copying
+        let simple_pattern = Regex::new(
+            r"(?i)create.*?(?:(\d+)kb\s+)?(?:text\s+)?file.*?copy.*?(\d+)\s+times"
+        ).unwrap();
+
+        let captures = pipeline_pattern.captures(description)
+            .or_else(|| simple_pattern.captures(description));
+
+        if let Some(captures) = captures {
+            let mut tasks = Vec::new();
+            
+            // Extract file size (default to 10kb if not specified)
+            let file_size_kb = captures.get(1)
+                .and_then(|m| m.as_str().parse::<u32>().ok())
+                .unwrap_or(10);
+            
+            // Extract copy count
+            let copy_count = captures.get(2)
+                .or_else(|| captures.get(3))
+                .and_then(|m| m.as_str().parse::<u32>().ok())
+                .unwrap_or(10);
+
+            // Task 1: Create the initial file with dummy data
+            let mut create_params = HashMap::new();
+            let file_size_bytes = file_size_kb * 1024;
+            
+            // Create a more realistic dummy content generation command
+            let create_command = if cfg!(target_os = "windows") {
+                format!("powershell -Command \"'A' * {} | Out-File -FilePath dummy_data.txt -Encoding ASCII -NoNewline\"", file_size_bytes)
+            } else {
+                format!("head -c {} /dev/zero | tr '\\0' 'A' > dummy_data.txt", file_size_bytes)
+            };
+            
+            create_params.insert("command".to_string(), create_command);
+
+            tasks.push(ParsedTask {
+                name: "create_dummy_file".to_string(),
+                task_type: "shell".to_string(),
+                parameters: create_params,
+                dependencies: Vec::new(),
+            });
+
+            // Tasks 2-N: Copy the file with random names
+            for i in 1..=copy_count {
+                let mut copy_params = HashMap::new();
+                copy_params.insert("source".to_string(), "dummy_data.txt".to_string());
+                copy_params.insert("destination".to_string(), format!("copy_{:03}_{}.txt", i, self.generate_random_suffix()));
+
+                tasks.push(ParsedTask {
+                    name: format!("copy_file_{}", i),
+                    task_type: "file_copy".to_string(),
+                    parameters: copy_params,
+                    dependencies: vec!["create_dummy_file".to_string()],
+                });
+            }
+
+            return Ok(Some(tasks));
+        }
+
+        Ok(None)
+    }
+
+    fn generate_random_suffix(&self) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let mut hasher = DefaultHasher::new();
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos().hash(&mut hasher);
+        format!("{:x}", hasher.finish()).chars().take(6).collect()
     }
 
     fn parse_multiple_tasks(
@@ -711,6 +818,58 @@ impl NlpProcessor {
 
         Ok(modified_content)
     }
+
+    // LLM-related methods
+    #[cfg(feature = "llm")]
+    fn check_llm_availability() -> bool {
+        // Check if LLM models are available
+        let llm_path = std::env::var("JORM_LLM_MODEL_PATH").unwrap_or_default();
+        let model_paths = [
+            "models/",
+            llm_path.as_str(),
+        ];
+
+        for path in &model_paths {
+            if !path.is_empty() && Path::new(path).exists() {
+                println!("🤖 LLM support enabled. Model directory found: {}", path);
+                println!("   Note: LLM integration is prepared but not yet implemented.");
+                println!("   Current version uses enhanced pattern matching.");
+                return true;
+            }
+        }
+
+        println!("ℹ️  LLM feature enabled but no models found.");
+        println!("   Set JORM_LLM_MODEL_PATH or create ./models/ directory");
+        println!("   Note: LLM integration is prepared for future implementation.");
+        false
+    }
+
+    #[cfg(not(feature = "llm"))]
+    fn check_llm_availability() -> bool {
+        println!("ℹ️  LLM support not enabled. Compile with --features llm to enable.");
+        println!("   Current version uses enhanced pattern matching for NLP.");
+        false
+    }
+
+    #[cfg(feature = "llm")]
+    async fn try_llm_generation(&self, description: &str) -> Result<Option<Vec<ParsedTask>>, JormError> {
+        // Placeholder for future LLM integration
+        // This is where we would integrate with a stable Rust LLM library
+        println!("🤖 LLM generation requested: {}", description);
+        println!("   LLM integration is prepared but not yet implemented.");
+        println!("   Falling back to enhanced pattern matching.");
+        
+        // Future implementation would:
+        // 1. Load a compatible LLM model (e.g., GGUF format)
+        // 2. Create a prompt for DAG generation
+        // 3. Generate DAG code using the LLM
+        // 4. Parse the generated code back into tasks
+        // 5. Return the parsed tasks
+        
+        Ok(None)
+    }
+
+
 }
 
 #[derive(Debug, Clone)]
